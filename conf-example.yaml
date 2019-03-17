@@ -1,0 +1,7 @@
+app.access_log:
+    base_dir: "/var/log/nginx"
+    pattern: "app.access.log*"
+
+another-app.access_log:
+    base_dir: "/var/log/nginx"
+    pattern: "another-app.access.log*"

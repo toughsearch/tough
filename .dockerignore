@@ -1,0 +1,9 @@
+__pycache__
+.index
+tough.build
+tough.dist
+build
+dist
+*.spec
+conf.yaml
+files/
