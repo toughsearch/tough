@@ -18,6 +18,7 @@ def fopen(name):
         if os.path.isfile(gzindex_name):
             f.import_index(gzindex_name)
         else:
+            # TODO: Do not build index separately
             f.build_full_index()
             f.export_index(gzindex_name)
         return f
@@ -36,8 +37,8 @@ def date_range(str_d1, str_d2):
         d1 += timedelta(days=1)
 
 
-def ensure_index_dir():
-    os.makedirs(INDEX_DIR, exist_ok=True)
+def ensure_index_dir(index_dir=INDEX_DIR):
+    os.makedirs(index_dir, exist_ok=True)
 
 
 def nginx_get_datetime(row):

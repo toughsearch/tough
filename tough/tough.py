@@ -2,11 +2,9 @@ import argparse
 
 from .commands.reindex import run_reindex
 from .commands.search import run_search
-from .utils import ensure_index_dir
 
 
 def run():
-    ensure_index_dir()
     main_parser = argparse.ArgumentParser(description="ToughSearch")
 
     subparsers = main_parser.add_subparsers(dest="command")

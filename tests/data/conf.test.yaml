@@ -1,0 +1,3 @@
+access_log:
+    base_dir: "tests/data/access_log"
+    pattern: "access_log*"

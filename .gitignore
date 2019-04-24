@@ -6,3 +6,7 @@ build-*/
 files/
 *.spec
 conf.yaml
+tests/data/index
+tests/data/access_log/*
+!tests/data/access_log/.gitkeep
+.coverage*

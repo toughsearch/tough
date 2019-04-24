@@ -1,7 +1,7 @@
-from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import glob
 import json
+import multiprocessing as mp
 import os
 import re
 import sys
@@ -19,24 +19,28 @@ def searcher(chunk, regex, substring, postprocess):
     mapper = EOLMapper(path)
     results = []
 
-    check = lambda x: substring in x
+    check = lambda x: substring in x  # noqa
     if regex is not None:
         check = regex.search
 
     with fopen(path) as f:
         m = mapper.read(line_start)
         f.seek(m.offset)
-        line_end = min(line_start + length, line_end)
-        for lineno in range(line_start, line_end):
+        chunk_line_end = line_start + length
+        if chunk_line_end > line_end:
+            chunk_line_end = line_end + 1
+        for lineno in range(line_start, chunk_line_end):
             line = f.readline()
+            if chunk_line_end == line_end + 1 and not line:
+                break
             if check(line):
                 result_line = line.strip()
                 if postprocess:
                     try:
                         result_line = postprocess(result_line)
                     except Exception as e:
-                        print("%r" % e)
-                        raise
+                        sys.stderr.write("%r\n" % e)
+                        continue
                 results.append((lineno, result_line))
 
     return path, results
@@ -80,6 +84,10 @@ def run_search(
         postprocess=postprocess,
     )
     chunks = list(chunkify(to_search))
-    with ProcessPoolExecutor(NUM_WORKERS) as executor:
-        for path, result in tqdm(executor.map(func, chunks), total=len(chunks)):
-            sys.stdout.write("\n".join(x[1].decode() for x in result))
+    pool = mp.Pool(NUM_WORKERS)
+
+    for _, result in tqdm(pool.map(func, chunks), total=len(chunks)):
+        sys.stdout.write("\n".join(x[1].decode() for x in result) + "\n")
+
+    pool.close()
+    pool.join()
