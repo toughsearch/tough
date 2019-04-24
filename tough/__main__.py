@@ -1,3 +1,3 @@
-from tough.tough import run
+from .tough import run
 
 run()

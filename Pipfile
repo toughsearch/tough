@@ -5,6 +5,28 @@ verify_ssl = true
 
 [dev-packages]
 pyinstaller = "*"
+ipython = "*"
+pytest = "~=4.3.0"
+black = "==19.3b0"
+flake8 = "~=3.7.7"
+mccabe = "*"
+flake8-bugbear = "*"
+flake8-builtins = "*"
+flake8-quotes = "*"
+flake8-comprehensions = "*"
+flake8-docstrings = "*"
+flake8-string-format = "*"
+flake8-debugger = "*"
+flake8-eradicate = "*"
+flake8-bandit = "*"
+flake8-print = "*"
+flake8-isort = "*"
+pep8-naming = "*"
+autoflake = "*"
+pytest-env = "*"
+ipdb = "*"
+pre-commit = "*"
+isort = "*"
 
 [packages]
 indexed-gzip = "~=0.8.8"

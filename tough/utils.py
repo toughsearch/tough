@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 
 import indexed_gzip as igzip
@@ -38,3 +38,10 @@ def date_range(str_d1, str_d2):
 
 def ensure_index_dir():
     os.makedirs(INDEX_DIR, exist_ok=True)
+
+
+def nginx_get_datetime(row):
+    fmt = "%d/%b/%Y:%H:%M:%S %z"
+    raw_datetime = row.split(b"[", maxsplit=1)[1].split(b"]", maxsplit=1)[0]
+    dt = datetime.strptime(raw_datetime.decode(), fmt)
+    return str(dt.astimezone(timezone.utc).date())

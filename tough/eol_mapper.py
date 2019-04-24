@@ -1,8 +1,8 @@
 from collections import namedtuple
 import os
 
-from .utils import dotify
-
+from .config import MIN_CHUNK_LENGTH, NUM_WORKERS
+from .utils import dotify, fopen
 
 LEN_OFFSET = 5
 OK = b"OK"
@@ -11,11 +11,16 @@ MapLine = namedtuple("MapLine", ["lineno", "offset", "length"])
 
 
 class EOLMapper:
+    """
+    File EOL mapper.
+    """
+
     def __init__(self, fname):
         self.src_fname = fname
         self.map_fname = dotify(f"{fname}.map")
 
         if not os.path.isfile(self.map_fname):
+            # Create empty map file
             open(self.map_fname, "w").close()
 
         self.f_read = open(self.map_fname, "rb")
@@ -63,3 +68,56 @@ class EOLMapper:
     def mark_ok(self):
         self.f.seek(0, 2)
         self.f.write(OK)
+
+
+def chunkify(to_search, min_chunk_length=MIN_CHUNK_LENGTH):
+    for path, lines_range in to_search:
+        lines_from = 0
+        lines_to = EOLMapper(path).count_lines()
+        if lines_range is not None:
+            # TODO: Single range case
+            lines_from, lines_to = lines_range
+        lines = lines_to - lines_from
+        length = max(round(lines / (NUM_WORKERS * 4)), min_chunk_length)
+        for line_start in range(lines_from, lines_to, length):
+            yield path, line_start, length, lines_to
+
+
+BUF_SIZE = 2 * 1024 * 1024
+
+
+def get_indexes(haystack, needle, add_offset=0):
+    indexes = []
+    index = haystack.find(needle)
+
+    while index > -1:
+        indexes.append(index + add_offset)
+        index = haystack.find(needle, index + 1)
+
+    return indexes
+
+
+def eol_map(fname):
+    with fopen(fname) as f:
+        lmap = EOLMapper(fname)
+        lmap.open()
+        if not lmap.needs_remapping():
+            return
+
+        lineno = 0
+
+        while True:
+            cur_pos = f.tell()
+            buf = f.read(BUF_SIZE)
+            if not buf:
+                break
+
+            indexes = get_indexes(buf, b"\n", cur_pos)
+            for index in indexes:
+                lmap.write(lineno, index + 1)
+                lineno += 1
+
+            if len(buf) < BUF_SIZE:
+                break
+        lmap.mark_ok()
+        lmap.close()
