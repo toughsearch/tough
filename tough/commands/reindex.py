@@ -11,7 +11,7 @@ from .. import indexes
 from ..commands.search import searcher
 from ..config import INDEX_DIR, NUM_WORKERS
 from ..eol_mapper import chunkify, eol_map
-from ..utils import ensure_index_dir, nginx_get_datetime
+from ..utils import ensure_index_dir, get_datetime
 
 
 def run_reindex(index_name):
@@ -54,9 +54,8 @@ def index_datetime(index_name, pool):
             )
         ]
 
-        func = partial(
-            searcher, regex=None, substring=b"", postprocess=nginx_get_datetime
-        )
+        postprocess = partial(get_datetime, index_name=index_name)
+        func = partial(searcher, regex=None, substring=b"", postprocess=postprocess)
         chunks = list(chunkify(paths))
         results = defaultdict(lambda: defaultdict(list))
 

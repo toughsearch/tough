@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta, timezone
 import os
+import re
 
 import indexed_gzip as igzip
 
+from . import indexes
 from .config import INDEX_DIR
 
 
@@ -41,8 +43,12 @@ def ensure_index_dir(index_dir=INDEX_DIR):
     os.makedirs(index_dir, exist_ok=True)
 
 
-def nginx_get_datetime(row):
-    fmt = "%d/%b/%Y:%H:%M:%S %z"
-    raw_datetime = row.split(b"[", maxsplit=1)[1].split(b"]", maxsplit=1)[0]
-    dt = datetime.strptime(raw_datetime.decode(), fmt)
+def get_datetime(row, index_name):
+    regex = indexes[index_name]["datetime_regex"]
+    fmt = indexes[index_name]["datetime_format"]
+    m = re.search(regex.encode(), row)
+    if not m:
+        return ""
+
+    dt = datetime.strptime(m.group(1).decode(), fmt)
     return str(dt.astimezone(timezone.utc).date())
