@@ -2,8 +2,6 @@ from datetime import datetime, timedelta, timezone
 import os
 import re
 
-import indexed_gzip as igzip
-
 from . import indexes
 from .config import INDEX_DIR
 
@@ -11,21 +9,6 @@ from .config import INDEX_DIR
 def dotify(file_path):
     path, fname = os.path.split(file_path)
     return os.path.join(path, "." + fname)
-
-
-def fopen(name):
-    if name.endswith(".gz"):
-        f = igzip.IndexedGzipFile(name)
-        gzindex_name = dotify(name + ".gzindex")
-        if os.path.isfile(gzindex_name):
-            f.import_index(gzindex_name)
-        else:
-            # TODO: Do not build index separately
-            f.build_full_index()
-            f.export_index(gzindex_name)
-        return f
-
-    return open(name, "r+b")
 
 
 def date_range(str_d1, str_d2):

@@ -2,10 +2,12 @@ from collections import namedtuple
 import os
 
 from .config import MIN_CHUNK_LENGTH, NUM_WORKERS
-from .utils import dotify, fopen
+from .opener import fopen
+from .utils import dotify
 
 LEN_OFFSET = 5
 OK = b"OK"
+BUF_SIZE = 2 * 1024 * 1024
 
 MapLine = namedtuple("MapLine", ["lineno", "offset", "length"])
 
@@ -69,6 +71,32 @@ class EOLMapper:
         self.f.seek(0, 2)
         self.f.write(OK)
 
+    @classmethod
+    def map(cls, fname):
+        with fopen(fname) as f:
+            lmap = cls(fname)
+            lmap.open()
+            if not lmap.needs_remapping():
+                return
+
+            lineno = 0
+
+            while True:
+                cur_pos = f.tell()
+                buf = f.read(BUF_SIZE)
+                if not buf:
+                    break
+
+                indexes = get_indexes(buf, b"\n", cur_pos)
+                for index in indexes:
+                    lmap.write(lineno, index + 1)
+                    lineno += 1
+
+                if len(buf) < BUF_SIZE:
+                    break
+            lmap.mark_ok()
+            lmap.close()
+
 
 def chunkify(to_search, min_chunk_length=MIN_CHUNK_LENGTH):
     for path, lines_range in to_search:
@@ -83,9 +111,6 @@ def chunkify(to_search, min_chunk_length=MIN_CHUNK_LENGTH):
             yield path, line_start, length, lines_to
 
 
-BUF_SIZE = 2 * 1024 * 1024
-
-
 def get_indexes(haystack, needle, add_offset=0):
     indexes = []
     index = haystack.find(needle)
@@ -95,29 +120,3 @@ def get_indexes(haystack, needle, add_offset=0):
         index = haystack.find(needle, index + 1)
 
     return indexes
-
-
-def eol_map(fname):
-    with fopen(fname) as f:
-        lmap = EOLMapper(fname)
-        lmap.open()
-        if not lmap.needs_remapping():
-            return
-
-        lineno = 0
-
-        while True:
-            cur_pos = f.tell()
-            buf = f.read(BUF_SIZE)
-            if not buf:
-                break
-
-            indexes = get_indexes(buf, b"\n", cur_pos)
-            for index in indexes:
-                lmap.write(lineno, index + 1)
-                lineno += 1
-
-            if len(buf) < BUF_SIZE:
-                break
-        lmap.mark_ok()
-        lmap.close()

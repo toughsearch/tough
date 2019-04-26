@@ -11,7 +11,8 @@ from tqdm import tqdm
 from .. import indexes
 from ..config import INDEX_DIR, NUM_WORKERS
 from ..eol_mapper import EOLMapper, chunkify
-from ..utils import date_range, fopen
+from ..opener import fopen
+from ..utils import date_range
 
 
 def searcher(chunk, regex, substring, postprocess):

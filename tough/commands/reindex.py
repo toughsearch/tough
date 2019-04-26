@@ -10,7 +10,7 @@ from tqdm import tqdm
 from .. import indexes
 from ..commands.search import searcher
 from ..config import INDEX_DIR, NUM_WORKERS
-from ..eol_mapper import chunkify, eol_map
+from ..eol_mapper import EOLMapper, chunkify
 from ..utils import ensure_index_dir, get_datetime
 
 
@@ -37,7 +37,7 @@ def index_eol_map(index_name, pool):
             glob.glob(os.path.join(index_conf["base_dir"], index_conf["pattern"]))
         )
 
-    for _ in tqdm(pool.map(eol_map, paths), total=len(paths)):
+    for _ in tqdm(pool.map(EOLMapper.map, paths), total=len(paths)):
         pass
 
 
