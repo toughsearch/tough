@@ -1,10 +1,8 @@
 import pytest
 
+from tests.const import INDEX_NAME
 from tough.commands.reindex import run_reindex
 from tough.commands.search import run_search
-
-INDEX_NAME = "access_log"
-DATA_DIR = "tests/data"
 
 
 @pytest.mark.parametrize(

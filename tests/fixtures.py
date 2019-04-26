@@ -4,7 +4,9 @@ import os
 import uuid
 
 import pytest
-from tests.test_search import DATA_DIR, INDEX_NAME
+
+from tests.const import DATA_DIR, INDEX_NAME
+from tough.config import INDEX_DIR
 
 
 @pytest.fixture
@@ -20,35 +22,33 @@ def provide_data():
     date_3 = "22/Feb/2019"
     date_4 = "23/Feb/2019"
 
-    file_1 = os.path.join(DATA_DIR, INDEX_NAME, f"{INDEX_NAME}.2.gz")
-    file_2 = os.path.join(DATA_DIR, INDEX_NAME, f"{INDEX_NAME}.1")
-    file_3 = os.path.join(DATA_DIR, INDEX_NAME, f"{INDEX_NAME}")
+    files_dir = os.path.join(DATA_DIR, INDEX_NAME)
 
-    with gzip.open(file_1, "wt") as f:
-        for _ in range(10):
-            f.write(fmt.format(date=date_1, url=uuid.uuid4()))
+    file_1 = gzip.open(os.path.join(files_dir, f"{INDEX_NAME}.2.gz"), "wt")
+    file_2 = open(os.path.join(files_dir, f"{INDEX_NAME}.1"), "w")
+    file_3 = open(os.path.join(files_dir, f"{INDEX_NAME}"), "w")
 
-        for _ in range(100):
-            f.write(fmt.format(date=date_2, url=uuid.uuid4()))
+    to_write = [
+        (file_1, ((date_1, 10), (date_2, 100))),
+        (file_2, ((date_2, 10), (date_3, 100))),
+        (file_3, ((date_3, 10), (date_4, 100))),
+    ]
 
-    with open(file_2, "w") as f:
-        for _ in range(10):
-            f.write(fmt.format(date=date_2, url=uuid.uuid4()))
-
-        for _ in range(100):
-            f.write(fmt.format(date=date_3, url=uuid.uuid4()))
-
-    with open(file_3, "w") as f:
-        for _ in range(10):
-            f.write(fmt.format(date=date_3, url=uuid.uuid4()))
-
-        for _ in range(100):
-            f.write(fmt.format(date=date_4, url=uuid.uuid4()))
+    for file, data in to_write:
+        for date, number in data:
+            for _ in range(number):
+                file.write(fmt.format(date=date, url=uuid.uuid4()))
+        file.close()
 
     yield
 
-    os.remove(file_1)
-    os.remove(file_2)
-    os.remove(file_3)
+
+@pytest.fixture(autouse=True)
+def clean():
+    yield
+    for f in glob.glob(os.path.join(DATA_DIR, INDEX_NAME, "access_log*")):
+        os.remove(f)
     for f in glob.glob(os.path.join(DATA_DIR, INDEX_NAME, ".access_log*")):
+        os.remove(f)
+    for f in glob.glob(os.path.join(INDEX_DIR, "*")):
         os.remove(f)
