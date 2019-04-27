@@ -23,4 +23,5 @@ def test_get_datetime():
         get_datetime(s, INDEX_NAME)
 
     s = b""
-    assert get_datetime(s, INDEX_NAME) == ""
+    with pytest.raises(ValueError):
+        get_datetime(s, INDEX_NAME)

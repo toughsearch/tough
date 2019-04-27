@@ -31,7 +31,7 @@ def get_datetime(row, index_name):
     fmt = indexes[index_name]["datetime_format"]
     m = re.search(regex.encode(), row)
     if not m:
-        return ""
+        raise ValueError
 
     dt = datetime.strptime(m.group(1).decode(), fmt)
     return str(dt.astimezone(timezone.utc).date())

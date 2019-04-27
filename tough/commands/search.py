@@ -34,15 +34,18 @@ def searcher(chunk, regex, substring, postprocess):
             line = f.readline()
             if chunk_line_end == line_end + 1 and not line:
                 break
-            if check(line):
-                result_line = line.strip()
-                if postprocess:
-                    try:
-                        result_line = postprocess(result_line)
-                    except Exception as e:
-                        sys.stderr.write("%r\n" % e)
-                        continue
-                results.append((lineno, result_line))
+
+            if not check(line):
+                continue
+
+            result_line = line.strip()
+            if postprocess:
+                try:
+                    result_line = postprocess(result_line)
+                except Exception as e:
+                    sys.stderr.write("%r\n" % e)
+                    continue
+            results.append((lineno, result_line))
 
     return path, results
 
