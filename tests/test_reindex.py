@@ -1,6 +1,8 @@
 import json
 import os
 
+import pytest
+
 from tough.commands.reindex import run_reindex
 from tough.config import INDEX_DIR
 
@@ -20,19 +22,21 @@ def test_reindex_empty():
     assert json.load(open(os.path.join(INDEX_DIR, INDEX_NAME))) == {}
 
 
-def test_reindex_data(provide_data):
+@pytest.mark.parametrize("newline", ["\n", "\r"])
+def test_reindex_data(provide_data, newline):
+    provide_data(newline)
     run_reindex(INDEX_NAME)
     actual_index = json.load(open(os.path.join(INDEX_DIR, INDEX_NAME)))
     assert actual_index == expected_index
 
 
-def test_reindex_all(provide_data):
+def test_reindex_all(provide_data_lf):
     run_reindex("")
     actual_index = json.load(open(os.path.join(INDEX_DIR, INDEX_NAME)))
     assert actual_index == expected_index
 
 
-def test_reindex_twice(provide_data):
+def test_reindex_twice(provide_data_lf):
     run_reindex("")
     run_reindex("")
     actual_index = json.load(open(os.path.join(INDEX_DIR, INDEX_NAME)))

@@ -25,6 +25,7 @@ class EOLMapper:
             # Create empty map file
             open(self.map_fname, "w").close()
 
+        self.f = None
         self.f_read = open(self.map_fname, "rb")
 
     def open(self):
@@ -87,7 +88,7 @@ class EOLMapper:
                 if not buf:
                     break
 
-                indexes = get_indexes(buf, b"\n", cur_pos)
+                indexes = get_newlines(buf, cur_pos)
                 for index in indexes:
                     lmap.write(lineno, index + 1)
                     lineno += 1
@@ -111,12 +112,21 @@ def chunkify(to_search, min_chunk_length=MIN_CHUNK_LENGTH):
             yield path, line_start, length, lines_to
 
 
-def get_indexes(haystack, needle, add_offset=0):
+def get_newlines(haystack, add_offset=0):
     indexes = []
-    index = haystack.find(needle)
+    index = find_newline(haystack)
 
     while index > -1:
         indexes.append(index + add_offset)
-        index = haystack.find(needle, index + 1)
+        index = find_newline(haystack, index + 1)
 
     return indexes
+
+
+def find_newline(s, start=0):
+    for newline in (b"\r\n", b"\n", b"\r"):
+        index = s.find(newline, start)
+        if index > -1:
+            return index
+
+    return -1

@@ -35,6 +35,9 @@ def searcher(chunk, regex, substring, postprocess):
             if chunk_line_end == line_end + 1 and not line:
                 break
 
+            if not line:
+                continue
+
             if not check(line):
                 continue
 
