@@ -6,11 +6,6 @@ from . import indexes
 from .config import INDEX_DIR
 
 
-def dotify(file_path):
-    path, fname = os.path.split(file_path)
-    return os.path.join(path, "." + fname)
-
-
 def date_range(str_d1, str_d2):
     fmt = "%Y-%m-%d"
 
@@ -23,7 +18,8 @@ def date_range(str_d1, str_d2):
 
 
 def ensure_index_dir(index_dir=INDEX_DIR):
-    os.makedirs(index_dir, exist_ok=True)
+    for index_name in indexes:
+        os.makedirs(os.path.join(index_dir, index_name), exist_ok=True)
 
 
 def get_datetime(row, index_name):

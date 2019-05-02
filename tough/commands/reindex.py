@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from .. import indexes
 from ..commands.search import searcher
-from ..config import INDEX_DIR, NUM_WORKERS
+from ..config import DATE_INDEX_NAME, INDEX_DIR, NUM_WORKERS
 from ..eol_mapper import EOLMapper, chunkify
 from ..utils import ensure_index_dir, get_datetime
 
@@ -32,12 +32,15 @@ def index_eol_map(index_name, pool):
         selected_indexes = [(index_name, indexes[index_name])]
 
     paths = []
-    for _, index_conf in selected_indexes:
+    for index_name, index_conf in selected_indexes:
         paths.extend(
-            glob.glob(os.path.join(index_conf["base_dir"], index_conf["pattern"]))
+            (x, index_name)
+            for x in glob.glob(
+                os.path.join(index_conf["base_dir"], index_conf["pattern"])
+            )
         )
 
-    for _ in tqdm(pool.map(EOLMapper.map, paths), total=len(paths)):
+    for _ in tqdm(pool.starmap(EOLMapper.map, paths), total=len(paths)):
         pass
 
 
@@ -55,8 +58,14 @@ def index_datetime(index_name, pool):
         ]
 
         postprocess = partial(get_datetime, index_name=index_name)
-        func = partial(searcher, regex=None, substring=b"", postprocess=postprocess)
-        chunks = list(chunkify(paths))
+        func = partial(
+            searcher,
+            regex=None,
+            substring=b"",
+            postprocess=postprocess,
+            index_name=index_name,
+        )
+        chunks = list(chunkify(paths, index_name))
         results = defaultdict(lambda: defaultdict(list))
 
         for path, result in tqdm(pool.imap_unordered(func, chunks), total=len(chunks)):
@@ -68,4 +77,6 @@ def index_datetime(index_name, pool):
                     results[date][filename][0] = min(results[date][filename][0], lineno)
                     results[date][filename][1] = max(results[date][filename][1], lineno)
 
-        json.dump(results, open(os.path.join(INDEX_DIR, index_name), "w"))
+        json.dump(
+            results, open(os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME), "w")
+        )

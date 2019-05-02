@@ -1,9 +1,8 @@
 from collections import namedtuple
 import os
 
-from .config import MIN_CHUNK_LENGTH, NUM_WORKERS
+from .config import INDEX_DIR, MIN_CHUNK_LENGTH, NUM_WORKERS
 from .opener import fopen
-from .utils import dotify
 
 LEN_OFFSET = 5
 OK = b"OK"
@@ -17,14 +16,16 @@ class EOLMapper:
     File EOL mapper.
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, index_name):
         self.src_fname = fname
-        self.map_fname = dotify(f"{fname}.map")
+        basename = os.path.basename(fname)
+        self.map_fname = os.path.join(INDEX_DIR, index_name, f"{basename}.map")
 
         if not os.path.isfile(self.map_fname):
             # Create empty map file
             open(self.map_fname, "w").close()
 
+        self.f = None
         self.f_read = open(self.map_fname, "rb")
 
     def open(self):
@@ -72,9 +73,9 @@ class EOLMapper:
         self.f.write(OK)
 
     @classmethod
-    def map(cls, fname):
-        with fopen(fname) as f:
-            lmap = cls(fname)
+    def map(cls, fname, index_name):
+        with fopen(fname, index_name) as f:
+            lmap = cls(fname, index_name)
             lmap.open()
             if not lmap.needs_remapping():
                 return
@@ -87,7 +88,7 @@ class EOLMapper:
                 if not buf:
                     break
 
-                indexes = get_indexes(buf, b"\n", cur_pos)
+                indexes = get_newlines(buf, cur_pos)
                 for index in indexes:
                     lmap.write(lineno, index + 1)
                     lineno += 1
@@ -98,10 +99,10 @@ class EOLMapper:
             lmap.close()
 
 
-def chunkify(to_search, min_chunk_length=MIN_CHUNK_LENGTH):
+def chunkify(to_search, index_name, min_chunk_length=MIN_CHUNK_LENGTH):
     for path, lines_range in to_search:
         lines_from = 0
-        lines_to = EOLMapper(path).count_lines()
+        lines_to = EOLMapper(path, index_name).count_lines()
         if lines_range is not None:
             # TODO: Single range case
             lines_from, lines_to = lines_range
@@ -111,12 +112,16 @@ def chunkify(to_search, min_chunk_length=MIN_CHUNK_LENGTH):
             yield path, line_start, length, lines_to
 
 
-def get_indexes(haystack, needle, add_offset=0):
+def get_newlines(haystack, add_offset=0):
     indexes = []
-    index = haystack.find(needle)
+    index = find_newline(haystack)
 
     while index > -1:
         indexes.append(index + add_offset)
-        index = haystack.find(needle, index + 1)
+        index = find_newline(haystack, index + 1)
 
     return indexes
+
+
+def find_newline(s, start=0):
+    return s.find(b"\n", start)

@@ -9,22 +9,22 @@ import sys
 from tqdm import tqdm
 
 from .. import indexes
-from ..config import INDEX_DIR, NUM_WORKERS
+from ..config import DATE_INDEX_NAME, INDEX_DIR, NUM_WORKERS
 from ..eol_mapper import EOLMapper, chunkify
 from ..opener import fopen
 from ..utils import date_range
 
 
-def searcher(chunk, regex, substring, postprocess):
+def searcher(chunk, regex, substring, postprocess, index_name):
     path, line_start, length, line_end = chunk
-    mapper = EOLMapper(path)
+    mapper = EOLMapper(path, index_name)
     results = []
 
     check = lambda x: substring in x  # noqa
     if regex is not None:
         check = regex.search
 
-    with fopen(path) as f:
+    with fopen(path, index_name) as f:
         m = mapper.read(line_start)
         f.seek(m.offset)
         chunk_line_end = line_start + length
@@ -58,7 +58,7 @@ def run_search(
         return
 
     index_conf = indexes[index_name]
-    index_data = json.load(open(os.path.join(INDEX_DIR, index_name)))
+    index_data = json.load(open(os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME)))
 
     to_search = []
     if not date_from and not date_to:
@@ -86,8 +86,9 @@ def run_search(
         regex=re.compile(regex.encode()) if regex else None,
         substring=substring.encode(),
         postprocess=postprocess,
+        index_name=index_name,
     )
-    chunks = list(chunkify(to_search))
+    chunks = list(chunkify(to_search, index_name))
     pool = mp.Pool(NUM_WORKERS)
 
     for _, result in tqdm(pool.map(func, chunks), total=len(chunks)):

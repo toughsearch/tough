@@ -1,12 +1,8 @@
 import pytest
 
-from tough.utils import date_range, dotify, get_datetime
+from tough.utils import date_range, get_datetime
 
 from .const import INDEX_NAME
-
-
-def test_dotify():
-    assert dotify("foo.bar") == ".foo.bar"
 
 
 def test_date_range():

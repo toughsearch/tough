@@ -2,12 +2,13 @@ import os
 
 import indexed_gzip as igzip
 
-from .utils import dotify
+from .config import INDEX_DIR
 
 
 class Opener:
-    def __init__(self, name):
+    def __init__(self, name, index_name):
         self.name = name
+        self.index_name = index_name
         self.file = None
 
     def __enter__(self):
@@ -29,7 +30,8 @@ class TextFileOpener(Opener):
 class GzipFileOpener(Opener):
     def open(self):
         f: igzip._IndexedGzipFile = igzip.IndexedGzipFile(self.name)
-        gzindex_name = dotify(self.name + ".gzindex")
+        basename = os.path.basename(self.name)
+        gzindex_name = os.path.join(INDEX_DIR, self.index_name, f"{basename}.gzindex")
         if os.path.isfile(gzindex_name):
             f.import_index(gzindex_name)
         else:
@@ -39,9 +41,9 @@ class GzipFileOpener(Opener):
         return f
 
 
-def fopen(name):
+def fopen(name, index_name):
     opener = TextFileOpener
     if name.endswith(".gz"):
         opener = GzipFileOpener
 
-    return opener(name)
+    return opener(name, index_name)

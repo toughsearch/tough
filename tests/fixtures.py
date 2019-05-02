@@ -1,6 +1,7 @@
 import glob
 import gzip
 import os
+import shutil
 import uuid
 
 import pytest
@@ -46,9 +47,6 @@ def provide_data():
 @pytest.fixture(autouse=True)
 def clean():
     yield
-    for f in glob.glob(os.path.join(DATA_DIR, INDEX_NAME, "access_log*")):
+    for f in glob.glob(os.path.join(DATA_DIR, INDEX_NAME, "*")):
         os.remove(f)
-    for f in glob.glob(os.path.join(DATA_DIR, INDEX_NAME, ".access_log*")):
-        os.remove(f)
-    for f in glob.glob(os.path.join(INDEX_DIR, "*")):
-        os.remove(f)
+    shutil.rmtree(os.path.join(INDEX_DIR), ignore_errors=True)
