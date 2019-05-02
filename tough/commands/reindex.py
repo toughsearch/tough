@@ -40,7 +40,7 @@ def index_eol_map(index_name, pool):
             )
         )
 
-    for _ in tqdm(pool.starmap(EOLMapper.map, paths), total=len(paths)):
+    for _ in tqdm(pool.imap(EOLMapper.map, paths), total=len(paths)):
         pass
 
 

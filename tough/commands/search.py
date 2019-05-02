@@ -91,7 +91,7 @@ def run_search(
     chunks = list(chunkify(to_search, index_name))
     pool = mp.Pool(NUM_WORKERS)
 
-    for _, result in tqdm(pool.map(func, chunks), total=len(chunks)):
+    for _, result in tqdm(pool.imap(func, chunks), total=len(chunks)):
         sys.stdout.write("\n".join(x[1].decode() for x in result) + "\n")
 
     pool.close()

@@ -73,7 +73,8 @@ class EOLMapper:
         self.f.write(OK)
 
     @classmethod
-    def map(cls, fname, index_name):
+    def map(cls, file_info):
+        fname, index_name = file_info
         with fopen(fname, index_name) as f:
             lmap = cls(fname, index_name)
             lmap.open()
