@@ -16,10 +16,13 @@ class Opener:
         return self.file
 
     def __exit__(self, *args):
-        self.file.close()
+        self.close()
 
     def open(self):
         raise NotImplementedError
+
+    def close(self):
+        self.file.close()
 
 
 class TextFileOpener(Opener):
@@ -28,17 +31,26 @@ class TextFileOpener(Opener):
 
 
 class GzipFileOpener(Opener):
-    def open(self):
-        f: igzip._IndexedGzipFile = igzip.IndexedGzipFile(self.name)
+    def __init__(self, name, index_name):
+        super().__init__(name, index_name)
+        self.has_index = False
         basename = os.path.basename(self.name)
-        gzindex_name = os.path.join(INDEX_DIR, self.index_name, f"{basename}.gzindex")
-        if os.path.isfile(gzindex_name):
-            f.import_index(gzindex_name)
-        else:
-            # TODO: Do not build index separately
-            f.build_full_index()
-            f.export_index(gzindex_name)
-        return f
+        self.gzindex_name = os.path.join(
+            INDEX_DIR, self.index_name, f"{basename}.gzindex"
+        )
+
+    def open(self):
+        file: igzip._IndexedGzipFile = igzip.IndexedGzipFile(self.name)
+
+        if os.path.isfile(self.gzindex_name):
+            file.import_index(self.gzindex_name)
+            self.has_index = True
+        return file
+
+    def close(self):
+        if not self.has_index:
+            self.file.export_index(self.gzindex_name)
+        super().close()
 
 
 def fopen(name, index_name):
