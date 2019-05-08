@@ -23,8 +23,14 @@ def ensure_index_dir(index_dir=INDEX_DIR):
 
 
 def get_datetime(row, index_name):
-    regex = indexes[index_name]["datetime_regex"]
-    fmt = indexes[index_name]["datetime_format"]
+    return get_datetime_ex(
+        row,
+        indexes[index_name]["datetime_regex"],
+        indexes[index_name]["datetime_format"],
+    )
+
+
+def get_datetime_ex(row, regex, fmt):
     m = re.search(regex.encode(), row)
     if not m:
         raise ValueError

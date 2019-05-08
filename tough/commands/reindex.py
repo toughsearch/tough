@@ -1,82 +1,117 @@
 from collections import defaultdict
 from functools import partial
 import glob
+from io import BytesIO
 import json
 import multiprocessing as mp
 import os
 
-from tqdm import tqdm
+from tough.opener import fopen
 
 from .. import indexes
-from ..commands.search import searcher
 from ..config import DATE_INDEX_NAME, INDEX_DIR, NUM_WORKERS
-from ..eol_mapper import EOLMapper, chunkify
-from ..utils import ensure_index_dir, get_datetime
+from ..eol_mapper import EOLMapper
+from ..utils import ensure_index_dir, get_datetime_ex
+
+BUF_SIZE = 2 * 1024 * 1024
 
 
-def run_reindex(index_name):
+def run_reindex(index=None):
     ensure_index_dir()
 
-    pool = mp.Pool(NUM_WORKERS)
+    for index_name, index_conf in indexes.items():
+        if index and index_name != index:
+            continue
 
-    index_eol_map(index_name, pool)
-    index_datetime(index_name, pool)
+        files = get_index_files(index_conf)
+        files = sorted_files(files, index_name)
 
-    pool.close()
-    pool.join()
+        pool = mp.Pool(NUM_WORKERS)
+
+        try:
+            for path in files:
+                add_to_index(path, index_name, pool=pool)
+
+        finally:
+            pool.close()
+            pool.join()
 
 
-def index_eol_map(index_name, pool):
-    selected_indexes = indexes.items()
-    if index_name:
-        selected_indexes = [(index_name, indexes[index_name])]
+def get_index_files(index_conf):
+    return glob.glob(os.path.join(index_conf["base_dir"], index_conf["pattern"]))
 
-    paths = []
-    for index_name, index_conf in selected_indexes:
-        paths.extend(
-            (x, index_name)
-            for x in glob.glob(
-                os.path.join(index_conf["base_dir"], index_conf["pattern"])
-            )
-        )
 
-    for _ in tqdm(pool.imap(EOLMapper.map, paths), total=len(paths)):
+def sorted_files(files, index_name):
+    index_conf = indexes[index_name]
+    datetime_regex = index_conf["datetime_regex"]
+    datetime_format = index_conf["datetime_format"]
+
+    to_sort = []
+    for path in files:
+        with fopen(path, index_name) as f:
+            first_row = next(f)
+            first_datetime = get_datetime_ex(first_row, datetime_regex, datetime_format)
+            to_sort.append((first_datetime, path))
+
+    return [x[1] for x in sorted(to_sort)]
+
+
+def add_to_index(path, index_name, *, pool):
+    filename = os.path.basename(path)
+    eol_mapper = EOLMapper(path, index_name)
+    eol_mapper.open()
+
+    date_index_path = os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME)
+    date_index = {}
+    try:
+        date_index = json.load(open(date_index_path, "r"))
+    except (FileNotFoundError, json.JSONDecodeError):
         pass
 
+    date_index = defaultdict(dict, date_index)
+    cur_lineno = 0
 
-def index_datetime(index_name, pool):
-    selected_indexes = indexes.items()
-    if index_name:
-        selected_indexes = [(index_name, indexes[index_name])]
+    _indexer = partial(indexer, index_name=index_name)
 
-    for index_name, index_conf in selected_indexes:
-        paths = [
-            (x, None)
-            for x in glob.glob(
-                os.path.join(index_conf["base_dir"], index_conf["pattern"])
-            )
-        ]
-
-        postprocess = partial(get_datetime, index_name=index_name)
-        func = partial(
-            searcher,
-            regex=None,
-            substring=b"",
-            postprocess=postprocess,
-            index_name=index_name,
-        )
-        chunks = list(chunkify(paths, index_name))
-        results = defaultdict(lambda: defaultdict(list))
-
-        for path, result in tqdm(pool.imap_unordered(func, chunks), total=len(chunks)):
-            filename = path.replace(index_conf["base_dir"], "")
-            for lineno, date in result:
-                if len(results[date][filename]) < 2:
-                    results[date][filename].append(lineno)
+    with fopen(path, index_name) as f:
+        for lines in pool.imap(_indexer, bufferizer(f, BUF_SIZE)):
+            for date, offset in lines:
+                eol_mapper.write(cur_lineno, offset)
+                date_index[date].setdefault(filename, [])
+                if len(date_index[date][filename]) < 2:
+                    date_index[date][filename].append(cur_lineno)
                 else:
-                    results[date][filename][0] = min(results[date][filename][0], lineno)
-                    results[date][filename][1] = max(results[date][filename][1], lineno)
+                    date_index[date][filename][1] = cur_lineno
+                cur_lineno += 1
 
-        json.dump(
-            results, open(os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME), "w")
-        )
+    eol_mapper.mark_ok()
+    eol_mapper.close()
+
+    json.dump(date_index, open(date_index_path, "w"))
+
+
+def bufferizer(f, buf_size):
+    while True:
+        offset = f.tell()
+        buf = f.read(buf_size)
+        if not buf:
+            break
+
+        buf += f.readline()
+        yield buf, offset
+
+
+def indexer(args, index_name):
+    index_conf = indexes[index_name]
+    datetime_regex = index_conf["datetime_regex"]
+    datetime_format = index_conf["datetime_format"]
+
+    buf, offset = args
+    stream = BytesIO(buf)
+
+    lines = []
+    for i, line in enumerate(stream):
+        date = get_datetime_ex(line, datetime_regex, datetime_format)
+        lines.append((date, offset + stream.tell()))
+
+    return lines

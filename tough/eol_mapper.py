@@ -17,7 +17,6 @@ class EOLMapper:
     """
 
     def __init__(self, fname, index_name):
-        self.src_fname = fname
         basename = os.path.basename(fname)
         self.map_fname = os.path.join(INDEX_DIR, index_name, f"{basename}.map")
 

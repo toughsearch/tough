@@ -8,16 +8,16 @@ INDEX_NAME = "access_log"
 DATA_DIR = "tests/data"
 
 expected_index = {
-    "2019-02-20": {"/access_log.2.gz": [0, 9]},
-    "2019-02-21": {"/access_log.2.gz": [10, 109], "/access_log.1": [0, 9]},
-    "2019-02-22": {"/access_log.1": [10, 109], "/access_log": [0, 9]},
-    "2019-02-23": {"/access_log": [10, 109]},
+    "2019-02-20": {"access_log.2.gz": [0, 9]},
+    "2019-02-21": {"access_log.2.gz": [10, 109], "access_log.1": [0, 9]},
+    "2019-02-22": {"access_log.1": [10, 109], "access_log": [0, 9]},
+    "2019-02-23": {"access_log": [10, 109]},
 }
 
 
 def test_reindex_empty():
     run_reindex(INDEX_NAME)
-    assert json.load(open(os.path.join(INDEX_DIR, INDEX_NAME, DATE_INDEX_NAME))) == {}
+    assert not os.path.isfile(os.path.join(INDEX_DIR, INDEX_NAME, DATE_INDEX_NAME))
 
 
 def test_reindex_data(provide_data):
