@@ -73,7 +73,8 @@ def add_to_index(path, index_name, *, pool):
 
     _indexer = partial(indexer, index_name=index_name)
 
-    with fopen(path, index_name) as f:
+    opener = fopen(path, index_name)
+    with opener as f:
         for lines in pool.imap(_indexer, bufferizer(f, BUF_SIZE)):
             for date, offset in lines:
                 eol_mapper.write(cur_lineno, offset)
@@ -83,6 +84,7 @@ def add_to_index(path, index_name, *, pool):
                 else:
                     date_index[date][filename][1] = cur_lineno
                 cur_lineno += 1
+        opener.export_index()
 
     eol_mapper.mark_ok()
     eol_mapper.close()
