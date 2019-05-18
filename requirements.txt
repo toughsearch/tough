@@ -1,4 +1,4 @@
 -i https://pypi.org/simple
-indexed-gzip==0.8.8
+indexed-gzip==0.8.10
 pyyaml==5.1
 tqdm==4.31.1

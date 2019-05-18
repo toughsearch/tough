@@ -4,6 +4,7 @@ import re
 
 from . import indexes
 from .config import INDEX_DIR
+from .dt import get_date
 
 
 def date_range(str_d1, str_d2):
@@ -31,9 +32,9 @@ def get_datetime(row, index_name):
 
 
 def get_datetime_ex(row, regex, fmt):
-    m = re.search(regex.encode(), row)
-    if not m:
-        raise ValueError
-
-    dt = datetime.strptime(m.group(1).decode(), fmt)
-    return str(dt.astimezone(timezone.utc).date())
+    # m = re.search(regex, row)
+    # if not m:
+    #     raise ValueError
+    # dt = str(datetime.strptime(m.group(1).decode(), fmt.decode()).astimezone(timezone.utc))
+    dt = get_date(row, regex, fmt)
+    return dt

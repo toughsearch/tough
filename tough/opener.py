@@ -1,7 +1,7 @@
 import os
 
 import indexed_gzip as igzip
-
+from threading import RLock
 from .config import INDEX_DIR
 
 
@@ -13,7 +13,7 @@ class Opener:
 
     def __enter__(self):
         self.file = self.open()
-        return self.file
+        return self
 
     def __exit__(self, *args):
         self.file.close()
