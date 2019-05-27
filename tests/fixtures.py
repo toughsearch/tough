@@ -1,3 +1,4 @@
+import datetime
 import glob
 import gzip
 import os
@@ -6,47 +7,66 @@ import uuid
 
 import pytest
 
-from tests.const import DATA_DIR, INDEX_NAME
 from tough.config import INDEX_DIR
 
 
 @pytest.fixture
-def provide_data():
-    """
-    Create files access_log.2.gz, access_log.1, access_log with some data
-    """
+def data_dir():
+    return "tests/data"
+
+
+@pytest.fixture
+def index_name():
+    return "access_log"
+
+
+@pytest.fixture
+def get_row():
     fmt = (
         '127.0.0.1 - - [{date}:12:34:56 +0000] "GET /{url} HTTP/1.1" 404 233 "-" "-"\n'
     )
-    date_1 = "20/Feb/2019"
-    date_2 = "21/Feb/2019"
-    date_3 = "22/Feb/2019"
-    date_4 = "23/Feb/2019"
 
-    files_dir = os.path.join(DATA_DIR, INDEX_NAME)
+    def _get_row(date):
+        str_date = date.strftime("%d/%b/%Y")
+        url = uuid.uuid4()
+        return fmt.format(date=str_date, url=url)
 
-    file_1 = gzip.open(os.path.join(files_dir, f"{INDEX_NAME}.2.gz"), "wt")
-    file_2 = open(os.path.join(files_dir, f"{INDEX_NAME}.1"), "w")
-    file_3 = open(os.path.join(files_dir, f"{INDEX_NAME}"), "w")
+    return _get_row
 
-    to_write = [
-        (file_1, ((date_1, 10), (date_2, 100))),
-        (file_2, ((date_2, 10), (date_3, 100))),
-        (file_3, ((date_3, 10), (date_4, 100))),
-    ]
 
-    for file, data in to_write:
-        for date, number in data:
-            for _ in range(number):
-                file.write(fmt.format(date=date, url=uuid.uuid4()))
-        file.close()
+@pytest.fixture
+def create_data_file(get_row, data_dir, index_name):
+    files_dir = os.path.join(data_dir, index_name)
 
-    yield
+    def _create_data_file(name, dates):
+        opener = open
+        mode = "w"
+        if name.endswith(".gz"):
+            opener = gzip.open
+            mode = "wt"
+
+        with opener(os.path.join(files_dir, name), mode) as f:
+            for date, number in dates:
+                lines = "".join(get_row(date) for _ in range(number))
+                f.writelines(lines)
+
+    return _create_data_file
+
+
+@pytest.fixture
+def provide_data(create_data_file, index_name):
+    """
+    Create files access_log.2.gz, access_log.1, access_log with some data
+    """
+    dates = [datetime.date(2019, 2, day) for day in range(20, 24)]
+    create_data_file(f"{index_name}.2.gz", ((dates[0], 10), (dates[1], 100)))
+    create_data_file(f"{index_name}.1", ((dates[1], 10), (dates[2], 100)))
+    create_data_file(f"{index_name}", ((dates[2], 10), (dates[3], 100)))
 
 
 @pytest.fixture(autouse=True)
-def clean():
+def clean(data_dir, index_name):
     yield
-    for f in glob.glob(os.path.join(DATA_DIR, INDEX_NAME, "*")):
+    for f in glob.glob(os.path.join(data_dir, index_name, "*")):
         os.remove(f)
     shutil.rmtree(os.path.join(INDEX_DIR), ignore_errors=True)

@@ -18,7 +18,7 @@ class Opener:
     def __exit__(self, *args):
         self.file.close()
 
-    def open(self):
+    def open(self):  # pragma: no cover
         raise NotImplementedError
 
     def export_index(self):

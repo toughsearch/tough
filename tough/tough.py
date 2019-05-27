@@ -11,14 +11,14 @@ def run():
 
     index_parser = subparsers.add_parser("reindex", help="Reindex using conf.yaml")
     index_parser.add_argument(
-        "index_name", help="Index name to reindex", default="", nargs="?"
+        "index", help="Index name to reindex", default="", nargs="?"
     )
 
     search_parser = subparsers.add_parser("search", help="Searcher")
     search_parser.add_argument(
         "substring", help="Substring to search", default="", nargs="?"
     )
-    search_parser.add_argument("index_name", help="Index to search")
+    search_parser.add_argument("index", help="Index to search")
     search_parser.add_argument("-e", "--regex", help="Regex pattern")
     search_parser.add_argument("-df", "--date-from")
     search_parser.add_argument("-dt", "--date-to")
@@ -31,5 +31,5 @@ def run():
     commands[dict_args.pop("command")](**dict_args)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     run()

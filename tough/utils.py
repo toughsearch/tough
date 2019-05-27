@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 import os
 import re
 
-from . import indexes
+from . import get_indexes
 from .config import INDEX_DIR
 
 
@@ -18,11 +18,12 @@ def date_range(str_d1, str_d2):
 
 
 def ensure_index_dir(index_dir=INDEX_DIR):
-    for index_name in indexes:
+    for index_name in get_indexes():
         os.makedirs(os.path.join(index_dir, index_name), exist_ok=True)
 
 
 def get_datetime(row, index_name):
+    indexes = get_indexes()
     return get_datetime_ex(
         row,
         indexes[index_name]["datetime_regex"],

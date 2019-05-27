@@ -1,8 +1,7 @@
 import pytest
 
+from tests.const import INDEX_NAME
 from tough.utils import date_range, get_datetime
-
-from .const import INDEX_NAME
 
 
 def test_date_range():

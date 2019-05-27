@@ -2,7 +2,6 @@ from collections import namedtuple
 import os
 
 from .config import INDEX_DIR, MIN_CHUNK_LENGTH, NUM_WORKERS
-from .opener import fopen
 
 LEN_OFFSET = 5
 OK = b"OK"
@@ -60,43 +59,9 @@ class EOLMapper:
     def count_lines(self):
         return os.path.getsize(self.map_fname) // LEN_OFFSET
 
-    def needs_remapping(self):
-        try:
-            self.f.seek(-2, 2)
-            return self.f.read(2) != OK
-        except OSError:
-            return True
-
     def mark_ok(self):
         self.f.seek(0, 2)
         self.f.write(OK)
-
-    @classmethod
-    def map(cls, file_info):
-        fname, index_name = file_info
-        with fopen(fname, index_name) as f:
-            lmap = cls(fname, index_name)
-            lmap.open()
-            if not lmap.needs_remapping():
-                return
-
-            lineno = 0
-
-            while True:
-                cur_pos = f.tell()
-                buf = f.read(BUF_SIZE)
-                if not buf:
-                    break
-
-                indexes = get_newlines(buf, cur_pos)
-                for index in indexes:
-                    lmap.write(lineno, index + 1)
-                    lineno += 1
-
-                if len(buf) < BUF_SIZE:
-                    break
-            lmap.mark_ok()
-            lmap.close()
 
 
 def chunkify(to_search, index_name, min_chunk_length=MIN_CHUNK_LENGTH):
@@ -110,18 +75,3 @@ def chunkify(to_search, index_name, min_chunk_length=MIN_CHUNK_LENGTH):
         length = max(round(lines / (NUM_WORKERS * 4)), min_chunk_length)
         for line_start in range(lines_from, lines_to, length):
             yield path, line_start, length, lines_to
-
-
-def get_newlines(haystack, add_offset=0):
-    indexes = []
-    index = find_newline(haystack)
-
-    while index > -1:
-        indexes.append(index + add_offset)
-        index = find_newline(haystack, index + 1)
-
-    return indexes
-
-
-def find_newline(s, start=0):
-    return s.find(b"\n", start)

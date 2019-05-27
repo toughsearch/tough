@@ -6,11 +6,10 @@ import json
 import multiprocessing as mp
 import os
 
-from tough.opener import fopen
-
-from .. import indexes
+from .. import get_indexes
 from ..config import DATE_INDEX_NAME, INDEX_DIR, NUM_WORKERS
 from ..eol_mapper import EOLMapper
+from ..opener import fopen
 from ..utils import ensure_index_dir, get_datetime_ex
 
 BUF_SIZE = 2 * 1024 * 1024
@@ -18,7 +17,7 @@ BUF_SIZE = 2 * 1024 * 1024
 
 def run_reindex(index=None):
     ensure_index_dir()
-
+    indexes = get_indexes()
     for index_name, index_conf in indexes.items():
         if index and index_name != index:
             continue
@@ -42,6 +41,7 @@ def get_index_files(index_conf):
 
 
 def sorted_files(files, index_name):
+    indexes = get_indexes()
     index_conf = indexes[index_name]
     datetime_regex = index_conf["datetime_regex"]
     datetime_format = index_conf["datetime_format"]
@@ -104,6 +104,7 @@ def bufferizer(f, buf_size):
 
 
 def indexer(args, index_name):
+    indexes = get_indexes()
     index_conf = indexes[index_name]
     datetime_regex = index_conf["datetime_regex"]
     datetime_format = index_conf["datetime_format"]
