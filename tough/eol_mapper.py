@@ -35,15 +35,13 @@ class EOLMapper:
     def read(self, lineno):
         f = self.f_read
         f.seek(LEN_OFFSET * max(lineno - 1, 0))
-        if lineno > 0:
-            record = f.read(LEN_OFFSET * 2)
-        else:
-            record = f.read(LEN_OFFSET)
 
         if lineno > 0:
+            record = f.read(LEN_OFFSET * 2)
             offset_start = int.from_bytes(record[:LEN_OFFSET], "little")
             offset_end = int.from_bytes(record[LEN_OFFSET:], "little")
         else:
+            record = f.read(LEN_OFFSET)
             offset_start = 0
             offset_end = int.from_bytes(record[:LEN_OFFSET], "little")
 
