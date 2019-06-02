@@ -66,10 +66,20 @@ def chunkify(to_search, index_name, min_chunk_length=MIN_CHUNK_LENGTH):
     for path, lines_range in to_search:
         lines_from = 0
         lines_to = EOLMapper(path, index_name).count_lines()
+        length = min_chunk_length
         if lines_range is not None:
-            # TODO: Single range case
-            lines_from, lines_to = lines_range
-        lines = lines_to - lines_from
-        length = max(round(lines / (NUM_WORKERS * 4)), min_chunk_length)
+            if len(lines_range) == 1:
+                lines_from = lines_range[0]
+                lines_to = lines_from + 1
+                length = 1
+
+            elif len(lines_range) == 2:
+                lines_from, lines_to = lines_range
+                lines = lines_to - lines_from
+                length = max(round(lines / (NUM_WORKERS * 4)), min_chunk_length)
+
+            else:
+                raise ValueError("Wrong date index")
+
         for line_start in range(lines_from, lines_to, length):
             yield path, line_start, length, lines_to

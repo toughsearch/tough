@@ -61,7 +61,7 @@ def provide_data(create_data_file, index_name):
     dates = [datetime.date(2019, 2, day) for day in range(20, 24)]
     create_data_file(f"{index_name}.2.gz", ((dates[0], 10), (dates[1], 100)))
     create_data_file(f"{index_name}.1", ((dates[1], 10), (dates[2], 100)))
-    create_data_file(f"{index_name}", ((dates[2], 10), (dates[3], 100)))
+    create_data_file(index_name, ((dates[2], 10), (dates[3], 100)))
 
 
 @pytest.fixture(autouse=True)
