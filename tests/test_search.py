@@ -43,6 +43,7 @@ def test_search_regex(provide_data, capsys, index_name):
     assert len([*filter(None, captured.out.split("\n"))]) == 10
 
 
+@pytest.mark.parametrize("search_date", ["2019-02-20", "2019-02-21"])
 def test_search_wrong_index(create_data_file, capsys, index_name, search_date):
     create_data_file(
         index_name, ((datetime.date(2019, 2, 20), 1), (datetime.date(2019, 2, 21), 1))
