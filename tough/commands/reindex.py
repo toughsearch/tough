@@ -117,7 +117,7 @@ def indexer(args, index_name):
     stream = BytesIO(buf)
 
     lines = []
-    for i, line in enumerate(stream):
+    for line in stream:
         date = get_datetime_ex(line, datetime_regex, datetime_format)
         lines.append((date, offset + stream.tell()))
 

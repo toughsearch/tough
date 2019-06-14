@@ -57,7 +57,7 @@ def create_data_file(get_row, data_dir, index_name):
 @pytest.fixture
 def provide_data(create_data_file, index_name):
     """
-    Create files access_log.2.gz, access_log.1, access_log with some data
+    Create files access_log.2.gz, access_log.1, access_log with some data.
     """
     dates = [datetime.date(2019, 2, day) for day in range(20, 24)]
     create_data_file(f"{index_name}.2.gz", ((dates[0], 10), (dates[1], 100)))
