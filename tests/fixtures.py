@@ -1,7 +1,7 @@
 import datetime
-import glob
 import gzip
 import os
+from pathlib import Path
 import shutil
 import uuid
 
@@ -12,7 +12,7 @@ from tough.config import INDEX_DIR
 
 @pytest.fixture
 def data_dir():
-    return "tests/data"
+    return Path("tests/data")
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def get_row():
 
 @pytest.fixture
 def create_data_file(get_row, data_dir, index_name):
-    files_dir = os.path.join(data_dir, index_name)
+    files_dir = data_dir / index_name
 
     def _create_data_file(name, dates):
         opener = open
@@ -45,7 +45,7 @@ def create_data_file(get_row, data_dir, index_name):
             opener = gzip.open
             mode = "wt"
 
-        with opener(os.path.join(files_dir, name), mode) as f:
+        with opener(files_dir / name, mode) as f:
             for date, number in dates:
                 lines = "".join(get_row(date) for _ in range(number))
                 f.writelines(lines)
@@ -67,6 +67,9 @@ def provide_data(create_data_file, index_name):
 @pytest.fixture(autouse=True)
 def clean(data_dir, index_name):
     yield
-    for f in glob.glob(os.path.join(data_dir, index_name, "*")):
-        os.remove(f)
-    shutil.rmtree(os.path.join(INDEX_DIR), ignore_errors=True)
+    for f in (data_dir / index_name).glob("*"):
+        if f.name == ".gitkeep":
+            continue
+
+        os.remove(str(f))
+    shutil.rmtree(INDEX_DIR, ignore_errors=True)

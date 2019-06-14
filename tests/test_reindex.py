@@ -1,5 +1,4 @@
 import json
-import os
 
 from tough.commands.reindex import run_reindex
 from tough.config import DATE_INDEX_NAME, INDEX_DIR
@@ -14,23 +13,23 @@ expected_index = {
 
 def test_reindex_empty(index_name):
     run_reindex(index_name)
-    assert not os.path.isfile(os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME))
+    assert not (INDEX_DIR / index_name / DATE_INDEX_NAME).is_file()
 
 
 def test_reindex_data(provide_data, index_name):
     run_reindex(index_name)
-    actual_index = json.load(open(os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME)))
+    actual_index = json.load(open(INDEX_DIR / index_name / DATE_INDEX_NAME))
     assert actual_index == expected_index
 
 
 def test_reindex_all(provide_data, index_name):
     run_reindex("")
-    actual_index = json.load(open(os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME)))
+    actual_index = json.load(open(INDEX_DIR / index_name / DATE_INDEX_NAME))
     assert actual_index == expected_index
 
 
 def test_reindex_twice(provide_data, index_name):
     run_reindex("")
     run_reindex("")
-    actual_index = json.load(open(os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME)))
+    actual_index = json.load(open(INDEX_DIR / index_name / DATE_INDEX_NAME))
     assert actual_index == expected_index
