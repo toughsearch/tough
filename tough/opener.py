@@ -34,7 +34,9 @@ class GzipFileOpener(Opener):
     def open(self):
         f: igzip._IndexedGzipFile = igzip.IndexedGzipFile(self.name)
         basename = os.path.basename(self.name)
-        gzindex_name = os.path.join(INDEX_DIR, self.index_name, f"{basename}.gzindex")
+        gzindex_name = os.path.join(
+            INDEX_DIR, self.index_name, f"{basename}.gzindex"
+        )
         if os.path.isfile(gzindex_name):
             f.import_index(gzindex_name)
 
@@ -42,7 +44,9 @@ class GzipFileOpener(Opener):
 
     def export_index(self):
         basename = os.path.basename(self.name)
-        gzindex_name = os.path.join(INDEX_DIR, self.index_name, f"{basename}.gzindex")
+        gzindex_name = os.path.join(
+            INDEX_DIR, self.index_name, f"{basename}.gzindex"
+        )
         self.file.seek(self.file.tell() - 1)
         self.file.export_index(gzindex_name)
 

@@ -51,7 +51,9 @@ def run_search(substring, regex, index_name, date_from=None, date_to=None):
 
     indexes = get_indexes()
     index_conf = indexes[index_name]
-    index_data = json.load(open(os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME)))
+    index_data = json.load(
+        open(os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME))
+    )
 
     to_search = []
     if not date_from and not date_to:
@@ -69,7 +71,9 @@ def run_search(substring, regex, index_name, date_from=None, date_to=None):
             for filename, lines_range in index_data[d].items():
                 to_search.append(
                     (
-                        os.path.join(index_conf["base_dir"], filename.strip("/")),
+                        os.path.join(
+                            index_conf["base_dir"], filename.strip("/")
+                        ),
                         lines_range,
                     )
                 )

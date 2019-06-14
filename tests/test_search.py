@@ -46,7 +46,8 @@ def test_search_regex(provide_data, capsys, index_name):
 @pytest.mark.parametrize("search_date", ["2019-02-20", "2019-02-21"])
 def test_search_wrong_index(create_data_file, capsys, index_name, search_date):
     create_data_file(
-        index_name, ((datetime.date(2019, 2, 20), 1), (datetime.date(2019, 2, 21), 1))
+        index_name,
+        ((datetime.date(2019, 2, 20), 1), (datetime.date(2019, 2, 21), 1)),
     )
     run_reindex(index_name)
     run_search("", r"HTTP.*", index_name, search_date, search_date)

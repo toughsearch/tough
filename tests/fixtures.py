@@ -23,7 +23,8 @@ def index_name():
 @pytest.fixture
 def get_row():
     fmt = (
-        '127.0.0.1 - - [{date}:12:34:56 +0000] "GET /{url} HTTP/1.1" 404 233 "-" "-"\n'
+        "127.0.0.1 - - [{date}:12:34:56 +0000] "
+        '"GET /{url} HTTP/1.1" 404 233 "-" "-"\n'
     )
 
     def _get_row(date):

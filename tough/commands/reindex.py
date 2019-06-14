@@ -37,7 +37,9 @@ def run_reindex(index=None):
 
 
 def get_index_files(index_conf):
-    return glob.glob(os.path.join(index_conf["base_dir"], index_conf["pattern"]))
+    return glob.glob(
+        os.path.join(index_conf["base_dir"], index_conf["pattern"])
+    )
 
 
 def sorted_files(files, index_name):
@@ -50,7 +52,9 @@ def sorted_files(files, index_name):
     for path in files:
         with fopen(path, index_name) as f:
             first_row = next(f)
-            first_datetime = get_datetime_ex(first_row, datetime_regex, datetime_format)
+            first_datetime = get_datetime_ex(
+                first_row, datetime_regex, datetime_format
+            )
             to_sort.append((first_datetime, path))
 
     return [x[1] for x in sorted(to_sort)]

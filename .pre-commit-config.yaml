@@ -29,3 +29,4 @@ repos:
     rev: stable
     hooks:
       - id: black
+        args: ['-l 80']

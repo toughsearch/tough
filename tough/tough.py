@@ -9,7 +9,9 @@ def run():
 
     subparsers = main_parser.add_subparsers(dest="command")
 
-    index_parser = subparsers.add_parser("reindex", help="Reindex using conf.yaml")
+    index_parser = subparsers.add_parser(
+        "reindex", help="Reindex using conf.yaml"
+    )
     index_parser.add_argument(
         "index", help="Index name to reindex", default="", nargs="?"
     )
