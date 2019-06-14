@@ -36,11 +36,14 @@ def test_reindex_twice(provide_data, index_name):
     assert actual_index == expected_index
 
 
-def test_reindex_only_changed_file(provide_data, index_name, data_dir, monkeypatch):
+def test_reindex_only_changed_file(
+    provide_data, index_name, data_dir, monkeypatch
+):
     run_reindex(index_name)
 
     fmt = (
-        '127.0.0.1 - - [{date}:12:34:56 +0000] "GET /{url} HTTP/1.1" 404 233 "-" "-"\n'
+        "127.0.0.1 - - [{date}:12:34:56 +0000] "
+        '"GET /{url} HTTP/1.1" 404 233 "-" "-"\n'
     )
 
     files_dir = data_dir / index_name
@@ -61,4 +64,7 @@ def test_reindex_only_changed_file(provide_data, index_name, data_dir, monkeypat
     assert add_to_index_paths[0] == "tests/data/access_log/access_log"
 
     actual_index = json.load(open(INDEX_DIR / index_name / DATE_INDEX_NAME))
-    assert actual_index == {**expected_index, "2019-02-25": {"access_log": [110]}}
+    assert actual_index == {
+        **expected_index,
+        "2019-02-25": {"access_log": [110]},
+    }
