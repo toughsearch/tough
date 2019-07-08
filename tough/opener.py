@@ -32,6 +32,7 @@ class TextFileOpener(Opener):
 
 class GzipFileOpener(Opener):
     def open(self):
+        # noinspection PyTypeChecker
         f: igzip._IndexedGzipFile = igzip.IndexedGzipFile(self.name)
         basename = os.path.basename(self.name)
         gzindex_name = os.path.join(

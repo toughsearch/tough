@@ -25,6 +25,8 @@ def run_reindex(index=None):
         files = get_index_files(index_conf)
         files = sorted_files(files, index_name)
 
+        # Проверить завершенность индекса для каждого файла
+
         pool = mp.Pool(NUM_WORKERS)
 
         try:
