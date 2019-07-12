@@ -54,6 +54,7 @@ class GzipFileOpener(Opener):
 
 def fopen(name, index_name):
     opener = TextFileOpener
+    name = str(name)
     if name.endswith(".gz"):
         opener = GzipFileOpener
 

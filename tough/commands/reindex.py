@@ -1,10 +1,10 @@
 from collections import defaultdict
 from functools import partial
-import glob
 from io import BytesIO
 import json
 import multiprocessing as mp
 import os
+from pathlib import Path
 
 from .. import get_indexes
 from ..config import DATE_INDEX_NAME, INDEX_DIR, NUM_WORKERS
@@ -22,7 +22,8 @@ def run_reindex(index=None):
         if index and index_name != index:
             continue
 
-        files = get_index_files(index_conf)
+        base_dir = Path(index_conf["base_dir"])
+        files = base_dir.glob(index_conf["pattern"])
         files = sorted_files(files, index_name)
 
         # Проверить завершенность индекса для каждого файла
@@ -31,17 +32,28 @@ def run_reindex(index=None):
 
         try:
             for path in files:
-                add_to_index(path, index_name, pool=pool)
+                if needs_reindex(path, index_name):
+                    add_to_index(path, index_name, pool=pool)
 
         finally:
             pool.close()
             pool.join()
 
 
-def get_index_files(index_conf):
-    return glob.glob(
-        os.path.join(index_conf["base_dir"], index_conf["pattern"])
-    )
+def needs_reindex(path, index_name):
+    date_index_path = INDEX_DIR / index_name / DATE_INDEX_NAME
+    if not date_index_path.exists():
+        return True
+
+    date_index = json.load(date_index_path.open("r"))
+
+    if "2019-02-23" not in date_index:
+        return True
+
+    if str(path).endswith(index_name):
+        return True
+
+    return False
 
 
 def sorted_files(files, index_name):
