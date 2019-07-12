@@ -44,15 +44,15 @@ def searcher(chunk, regex, substring, index_name):
     return path, results
 
 
-def run_search(substring, regex, index_name, date_from=None, date_to=None):
+def run_search(substring, regex, index, date_from=None, date_to=None):
     if not substring and not regex:
         sys.stderr.write("Please provide substring or --regex (-e) parameter\n")
         return
 
     indexes = get_indexes()
-    index_conf = indexes[index_name]
+    index_conf = indexes[index]
     index_data = json.load(
-        open(os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME))
+        open(os.path.join(INDEX_DIR, index, DATE_INDEX_NAME))
     )
 
     to_search = []
@@ -82,9 +82,9 @@ def run_search(substring, regex, index_name, date_from=None, date_to=None):
         searcher,
         regex=re.compile(regex.encode()) if regex else None,
         substring=substring.encode(),
-        index_name=index_name,
+        index_name=index,
     )
-    chunks = list(chunkify(to_search, index_name))
+    chunks = list(chunkify(to_search, index))
     pool = mp.Pool(NUM_WORKERS)
 
     try:
