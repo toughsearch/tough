@@ -6,6 +6,7 @@ from .config import INDEX_DIR, MIN_CHUNK_LENGTH, NUM_WORKERS
 LEN_OFFSET = 5
 OK = b"OK"
 BUF_SIZE = 2 * 1024 * 1024
+BYTE_ORDER = "little"
 
 MapLine = namedtuple("MapLine", ["lineno", "offset", "length"])
 
@@ -33,24 +34,27 @@ class EOLMapper:
         self.f.close()
 
     def read(self, lineno):
+        if lineno >= self.count_lines() or lineno < 0:
+            return None
+
         f = self.f_read
         f.seek(LEN_OFFSET * max(lineno - 1, 0))
 
         if lineno > 0:
             record = f.read(LEN_OFFSET * 2)
-            offset_start = int.from_bytes(record[:LEN_OFFSET], "little")
-            offset_end = int.from_bytes(record[LEN_OFFSET:], "little")
+            offset_start = int.from_bytes(record[:LEN_OFFSET], BYTE_ORDER)
+            offset_end = int.from_bytes(record[LEN_OFFSET:], BYTE_ORDER)
         else:
             record = f.read(LEN_OFFSET)
             offset_start = 0
-            offset_end = int.from_bytes(record[:LEN_OFFSET], "little")
+            offset_end = int.from_bytes(record[:LEN_OFFSET], BYTE_ORDER)
 
         length = offset_end - offset_start - 1
 
         return MapLine(lineno, offset_start, length)
 
     def write(self, lineno, offset):
-        record = offset.to_bytes(LEN_OFFSET, "little")
+        record = offset.to_bytes(LEN_OFFSET, BYTE_ORDER)
         self.f.seek(LEN_OFFSET * lineno)
         self.f.write(record)
 
