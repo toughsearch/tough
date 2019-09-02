@@ -1,5 +1,0 @@
-access_log:
-    base_dir: "tests/data/access_log"
-    pattern: "access_log*"
-    datetime_regex: \[([^\]]*)
-    datetime_format: "%d/%b/%Y:%H:%M:%S %z"

@@ -26,11 +26,9 @@ autoflake = "*"
 pytest-env = "*"
 pre-commit = "*"
 isort = "*"
+pyyaml = "*"
 
 [packages]
-indexed-gzip = "~=0.8.8"
-pyyaml = "~=5.1"
-tqdm = "~=4.31.1"
 
 [requires]
 python_version = "3.7"

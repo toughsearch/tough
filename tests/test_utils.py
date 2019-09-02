@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 
 from tough.utils import date_range, get_datetime
@@ -10,7 +12,7 @@ def test_date_range():
 
 def test_get_datetime(index_name):
     s = b'127.0.0.1 - - [20/Feb/2019:23:03:24 +0000] "GET / HTTP/1.1"'
-    assert get_datetime(s, index_name) == "2019-02-20"
+    assert get_datetime(s, index_name) == date(2019, 2, 20)
 
     s = b'127.0.0.1 - - [2019-02-20 23:03:24 +0000] "GET / HTTP/1.1"'
     with pytest.raises(ValueError):

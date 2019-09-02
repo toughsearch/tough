@@ -2,12 +2,9 @@ import datetime
 import gzip
 import os
 from pathlib import Path
-import shutil
 import uuid
 
 import pytest
-
-from tough.config import INDEX_DIR
 
 
 @pytest.fixture
@@ -73,4 +70,3 @@ def clean(data_dir, index_name):
             continue
 
         os.remove(str(f))
-    shutil.rmtree(INDEX_DIR, ignore_errors=True)

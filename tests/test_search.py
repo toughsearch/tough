@@ -2,8 +2,7 @@ import datetime
 
 import pytest
 
-from tough.commands.reindex import run_reindex
-from tough.commands.search import run_search
+from tough.search import run_search
 
 
 @pytest.mark.parametrize(
@@ -23,22 +22,22 @@ from tough.commands.search import run_search
 def test_search_date_range(
     provide_data, capsys, substring, date_from, date_to, count, index_name
 ):
-    run_reindex(index_name)
+    date_from = datetime.datetime.strptime(date_from, "%Y-%m-%d").date()
+    date_to = datetime.datetime.strptime(date_to, "%Y-%m-%d").date()
     run_search(substring, None, index_name, date_from, date_to)
     captured = capsys.readouterr()
     assert len([*filter(None, captured.out.split("\n"))]) == count
 
 
 def test_search_all(provide_data, capsys, index_name):
-    run_reindex(index_name)
     run_search("HTTP/1.1", None, index_name)
     captured = capsys.readouterr()
     assert len([*filter(None, captured.out.split("\n"))]) == 330
 
 
 def test_search_regex(provide_data, capsys, index_name):
-    run_reindex(index_name)
-    run_search("", r"HTTP.*", index_name, "2019-02-20", "2019-02-20")
+    search_date = datetime.datetime.strptime("2019-02-20", "%Y-%m-%d").date()
+    run_search("", r"HTTP.*", index_name, search_date, search_date)
     captured = capsys.readouterr()
     assert len([*filter(None, captured.out.split("\n"))]) == 10
 
@@ -49,7 +48,7 @@ def test_search_wrong_index(create_data_file, capsys, index_name, search_date):
         index_name,
         ((datetime.date(2019, 2, 20), 1), (datetime.date(2019, 2, 21), 1)),
     )
-    run_reindex(index_name)
+    search_date = datetime.datetime.strptime(search_date, "%Y-%m-%d").date()
     run_search("", r"HTTP.*", index_name, search_date, search_date)
     captured = capsys.readouterr()
     assert len([*filter(None, captured.out.split("\n"))]) == 1

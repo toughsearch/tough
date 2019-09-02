@@ -1,10 +1,12 @@
-import yaml
+import configparser
 
 from .config import CONF_NAME
 
 
 def get_indexes(conf_name=CONF_NAME):
     try:
-        return yaml.safe_load(open(CONF_NAME))
+        config = configparser.RawConfigParser()
+        config.read(CONF_NAME)
+        return config
     except FileNotFoundError:
         return {}
