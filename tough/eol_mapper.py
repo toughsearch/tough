@@ -1,5 +1,8 @@
 from collections import namedtuple
 import os
+from typing import BinaryIO, Generator, Optional, Tuple, Union
+
+import indexed_gzip as igzip
 
 from .config import INDEX_DIR, MIN_CHUNK_LENGTH, NUM_WORKERS
 
@@ -16,7 +19,9 @@ class EOLMapper:
     File EOL mapper.
     """
 
-    def __init__(self, fname, index_name):
+    f: Optional[Union[BinaryIO, igzip._IndexedGzipFile]]
+
+    def __init__(self, fname, index_name) -> None:
         basename = os.path.basename(fname)
         self.map_fname = os.path.join(INDEX_DIR, index_name, f"{basename}.map")
 
@@ -27,13 +32,16 @@ class EOLMapper:
         self.f = None
         self.f_read = open(self.map_fname, "rb")
 
-    def open(self):
+    def open(self) -> None:
         self.f = open(self.map_fname, "r+b")
 
-    def close(self):
+    def close(self) -> None:
+        if not self.f:
+            raise IOError
+
         self.f.close()
 
-    def read(self, lineno):
+    def read(self, lineno) -> Optional[MapLine]:
         if lineno >= self.count_lines() or lineno < 0:
             return None
 
@@ -53,20 +61,27 @@ class EOLMapper:
 
         return MapLine(lineno, offset_start, length)
 
-    def write(self, lineno, offset):
+    def write(self, lineno, offset) -> None:
+        if not self.f:
+            raise IOError
+
         record = offset.to_bytes(LEN_OFFSET, BYTE_ORDER)
         self.f.seek(LEN_OFFSET * lineno)
         self.f.write(record)
 
-    def count_lines(self):
+    def count_lines(self) -> int:
         return os.path.getsize(self.map_fname) // LEN_OFFSET
 
-    def mark_ok(self):
+    def mark_ok(self) -> None:
+        if not self.f:
+            raise IOError
         self.f.seek(0, 2)
         self.f.write(OK)
 
 
-def chunkify(to_search, index_name, min_chunk_length=MIN_CHUNK_LENGTH):
+def chunkify(
+    to_search, index_name, min_chunk_length=MIN_CHUNK_LENGTH
+) -> Generator[Tuple[str, int, int, int], None, None]:
     for path, lines_range in to_search:
         lines_from = 0
         lines_to = EOLMapper(path, index_name).count_lines()

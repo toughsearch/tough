@@ -26,7 +26,7 @@ class Index:
         pattern: str,
         datetime_regex: str,
         datetime_format: str,
-    ):
+    ) -> None:
         self.name = name
         self.base_dir = base_dir
         self.pattern = pattern

@@ -5,6 +5,7 @@ import multiprocessing as mp
 import os
 import re
 import sys
+from typing import Callable, List, Match, Optional, Pattern, Tuple, Union
 
 from tqdm import tqdm
 
@@ -15,17 +16,28 @@ from ..opener import fopen
 from ..utils import date_range
 
 
-def searcher(chunk, regex, substring, index_name):
+def searcher(
+    chunk: Tuple[str, int, int, int],
+    regex: Optional[Pattern],
+    substring: str,
+    index_name: str,
+) -> Tuple[str, List[Tuple[int, bytes]]]:
     path, line_start, length, line_end = chunk
     mapper = EOLMapper(path, index_name)
     results = []
 
+    check: Union[
+        Callable[[bytes], bool],
+        Callable[[bytes, int, int], Optional[Match[bytes]]],
+    ]
     check = lambda x: substring in x  # noqa
     if regex is not None:
         check = regex.search
 
     with fopen(path, index_name) as f:
         m = mapper.read(line_start)
+        if not m:
+            raise IOError
         f.seek(m.offset)
         chunk_line_end = line_start + length
         if chunk_line_end > line_end:
@@ -44,7 +56,13 @@ def searcher(chunk, regex, substring, index_name):
     return path, results
 
 
-def run_search(substring, regex, index, date_from=None, date_to=None):
+def run_search(
+    substring: str,
+    regex: str,
+    index: str,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+) -> None:
     if not substring and not regex:
         sys.stderr.write("Please provide substring or --regex (-e) parameter\n")
         return
@@ -55,8 +73,8 @@ def run_search(substring, regex, index, date_from=None, date_to=None):
         open(os.path.join(INDEX_DIR, index, DATE_INDEX_NAME))
     )
 
-    to_search = []
-    if not date_from and not date_to:
+    to_search: List[Tuple[str, Optional[Tuple]]] = []
+    if not date_from or not date_to:
         to_search = [
             (x, None)
             for x in glob.glob(

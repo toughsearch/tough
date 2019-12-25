@@ -1,12 +1,14 @@
 from datetime import datetime, timedelta, timezone
 import os
+from pathlib import Path
 import re
+from typing import Generator
 
 from . import get_indexes
 from .config import INDEX_DIR
 
 
-def date_range(str_d1, str_d2):
+def date_range(str_d1: str, str_d2: str) -> Generator[str, None, None]:
     fmt = "%Y-%m-%d"
 
     d1 = datetime.strptime(str_d1, fmt)
@@ -17,12 +19,12 @@ def date_range(str_d1, str_d2):
         d1 += timedelta(days=1)
 
 
-def ensure_index_dir(index_dir=INDEX_DIR):
+def ensure_index_dir(index_dir: Path = INDEX_DIR) -> None:
     for index_name in get_indexes():
         os.makedirs(os.path.join(index_dir, index_name), exist_ok=True)
 
 
-def get_datetime(row, index_name):
+def get_datetime(row: bytes, index_name: str) -> str:
     indexes = get_indexes()
     return get_datetime_ex(
         row,
@@ -31,7 +33,7 @@ def get_datetime(row, index_name):
     )
 
 
-def get_datetime_ex(row, regex, fmt):
+def get_datetime_ex(row: bytes, regex: str, fmt: str) -> str:
     m = re.search(regex.encode(), row)
     if not m:
         raise ValueError
