@@ -2,8 +2,7 @@ import datetime
 
 import pytest
 
-from tough.commands.reindex import run_reindex
-from tough.commands.search import run_search
+from tough.tough import run_reindex, run_search
 
 
 @pytest.mark.parametrize(

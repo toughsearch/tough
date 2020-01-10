@@ -1,7 +1,6 @@
 import pytest
 
-from tough.eol_mapper import EOLMapper
-from tough.utils import ensure_index_dir
+from tough.tough import EOLMapper, ensure_index_dir
 
 
 @pytest.fixture(autouse=True)

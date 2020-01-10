@@ -1,6 +1,6 @@
 import pytest
 
-from tough.eol_mapper import MapLine
+from tough.tough import MapLine
 
 
 @pytest.mark.parametrize("contents", ["a\n"])

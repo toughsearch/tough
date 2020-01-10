@@ -1,7 +1,7 @@
 import json
 
-from tough.commands.reindex import run_reindex
 from tough.config import DATE_INDEX_NAME, INDEX_DIR
+from tough.tough import run_reindex
 
 expected_index = {
     "2019-02-20": {"access_log.2.gz": [0, 9]},
