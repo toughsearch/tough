@@ -26,6 +26,7 @@ autoflake = "*"
 pytest-env = "*"
 pre-commit = "*"
 isort = "*"
+mypy = "*"
 
 [packages]
 indexed-gzip = "~=0.8.8"
