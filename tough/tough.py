@@ -82,7 +82,7 @@ class EOLMapper:
     File EOL mapper.
     """
 
-    f: Optional[Union[BinaryIO, igzip._IndexedGzipFile]]
+    f: Optional[Union[BinaryIO, igzip.IndexedGzipFile]]
 
     def __init__(self, fname, index_name) -> None:
         basename = os.path.basename(fname)
@@ -293,7 +293,7 @@ def indexer(args, index_name) -> List[Tuple[str, int]]:
 
 
 class Opener(ContextManager):
-    file: Optional[Union[BinaryIO, igzip._IndexedGzipFile]]
+    file: Optional[Union[BinaryIO, igzip.IndexedGzipFile]]
 
     def __init__(self, name: str, index_name: str) -> None:
         self.name = name
@@ -329,7 +329,7 @@ class TextFileOpener(Opener):
 
 class GzipFileOpener(Opener):
     def open(self) -> BinaryIO:
-        f: igzip._IndexedGzipFile = igzip.IndexedGzipFile(self.name)
+        f = igzip.IndexedGzipFile(self.name)
         basename = os.path.basename(self.name)
         gzindex_name = os.path.join(
             INDEX_DIR, self.index_name, f"{basename}.gzindex"
