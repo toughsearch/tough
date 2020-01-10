@@ -5,7 +5,7 @@ import multiprocessing as mp
 import os
 import re
 import sys
-from typing import Callable, List, Match, Optional, Pattern, Tuple, Union
+from typing import Callable, List, Match, Optional, Tuple, Union
 
 from tqdm import tqdm
 
@@ -18,8 +18,8 @@ from ..utils import date_range
 
 def searcher(
     chunk: Tuple[str, int, int, int],
-    regex: Optional[Pattern],
-    substring: str,
+    regex: bool,
+    substring: bytes,
     index_name: str,
 ) -> Tuple[str, List[Tuple[int, bytes]]]:
     path, line_start, length, line_end = chunk
@@ -31,8 +31,8 @@ def searcher(
         Callable[[bytes, int, int], Optional[Match[bytes]]],
     ]
     check = lambda x: substring in x  # noqa
-    if regex is not None:
-        check = regex.search
+    if regex:
+        check = re.compile(substring).search
 
     with fopen(path, index_name) as f:
         m = mapper.read(line_start)
@@ -58,13 +58,13 @@ def searcher(
 
 def run_search(
     substring: str,
-    regex: str,
+    regex: bool,
     index: str,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
 ) -> None:
-    if not substring and not regex:
-        sys.stderr.write("Please provide substring or --regex (-e) parameter\n")
+    if not substring:
+        sys.stderr.write("Please provide substring\n")
         return
 
     indexes = get_indexes()
@@ -97,10 +97,7 @@ def run_search(
                 )
 
     func = partial(
-        searcher,
-        regex=re.compile(regex.encode()) if regex else None,
-        substring=substring.encode(),
-        index_name=index,
+        searcher, substring=substring.encode(), regex=regex, index_name=index
     )
     chunks = list(chunkify(to_search, index))
     pool = mp.Pool(NUM_WORKERS)

@@ -5,6 +5,6 @@ from .config import CONF_NAME
 
 def get_indexes(conf_name: str = CONF_NAME) -> dict:
     try:
-        return yaml.safe_load(open(CONF_NAME))
+        return yaml.safe_load(open(conf_name))
     except FileNotFoundError:
         return {}
