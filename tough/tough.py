@@ -32,44 +32,6 @@ import yaml
 from . import CONF_NAME, get_indexes
 from .config import DATE_INDEX_NAME, INDEX_DIR, MIN_CHUNK_LENGTH, NUM_WORKERS
 
-
-def run():
-    main_parser = argparse.ArgumentParser(description="ToughSearch")
-
-    subparsers = main_parser.add_subparsers(dest="command")
-
-    index_parser = subparsers.add_parser(
-        "reindex", help="Reindex using conf.yaml"
-    )
-    index_parser.add_argument(
-        "index", help="Index name to reindex", default="", nargs="?"
-    )
-
-    search_parser = subparsers.add_parser("search", help="Searcher")
-    search_parser.add_argument(
-        "substring", help="Substring to search", default="", nargs="?"
-    )
-    search_parser.add_argument("index", help="Index to search")
-    search_parser.add_argument(
-        "-e",
-        "--regex",
-        help="Substring is a regex pattern",
-        action="store_true",
-    )
-    search_parser.add_argument("-df", "--date-from")
-    search_parser.add_argument("-dt", "--date-to")
-
-    args = main_parser.parse_args()
-    dict_args = args.__dict__
-
-    commands = {"search": run_search, "reindex": run_reindex}
-
-    commands[dict_args.pop("command")](**dict_args)
-
-
-if __name__ == "__main__":  # pragma: no cover
-    run()
-
 LEN_OFFSET = 5
 OK = b"OK"
 BUF_SIZE = 2 * 1024 * 1024
@@ -86,11 +48,8 @@ class EOLMapper:
 
     def __init__(self, fname, index_name) -> None:
         basename = os.path.basename(fname)
-        self.map_fname = os.path.join(INDEX_DIR, index_name, f"{basename}.map")
-
-        if not os.path.isfile(self.map_fname):
-            # Create empty map file
-            open(self.map_fname, "w").close()
+        self.map_fname = INDEX_DIR / index_name / f"{basename}.map"
+        self.map_fname.touch()
 
         self.f = None
         self.f_read = open(self.map_fname, "rb")
@@ -133,7 +92,7 @@ class EOLMapper:
         self.f.write(record)
 
     def count_lines(self) -> int:
-        return os.path.getsize(self.map_fname) // LEN_OFFSET
+        return self.map_fname.stat().st_size // LEN_OFFSET
 
     def mark_ok(self) -> None:
         if not self.f:
@@ -167,6 +126,14 @@ def chunkify(
             yield path, line_start, length, lines_to
 
 
+class Indexer:
+    def __init__(self):
+        ...
+
+    def add(self):
+        ...
+
+
 class Index:
     def __init__(
         self,
@@ -177,13 +144,13 @@ class Index:
         datetime_format: str,
     ) -> None:
         self.name = name
-        self.base_dir = base_dir
+        self.base_dir = Path(base_dir)
         self.pattern = pattern
         self.datetime_regex = datetime_regex
         self.datetime_format = datetime_format
 
     def get_files(self) -> List[str]:
-        files = glob.glob(os.path.join(self.base_dir, self.pattern))
+        files = glob.glob(str(self.base_dir / self.pattern))
         to_sort = []
         for path in files:
             with fopen(path, self.name) as f:
@@ -200,11 +167,57 @@ class Index:
 
         try:
             for path in self.get_files():
-                add_to_index(path, self.name, pool=pool)
+                self.add(path, pool=pool)
 
         finally:
             pool.close()
             pool.join()
+
+    def add(self, path, *, pool) -> None:
+        filename = os.path.basename(path)
+        eol_mapper = EOLMapper(path, self.name)
+        eol_mapper.open()
+
+        date_index_path = os.path.join(INDEX_DIR, self.name, DATE_INDEX_NAME)
+        date_index: dict = {}
+        try:
+            date_index = json.load(open(date_index_path, "r"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+
+        date_index = defaultdict(dict, date_index)
+        cur_lineno = 0
+
+        _indexer = partial(indexer, index_name=self.name)
+
+        opener = fopen(path, self.name)
+        with opener as f:
+            for lines in pool.imap(_indexer, self.bufferizer(f, BUF_SIZE)):
+                for date, offset in lines:
+                    eol_mapper.write(cur_lineno, offset)
+                    date_index[date].setdefault(filename, [])
+                    if len(date_index[date][filename]) < 2:
+                        date_index[date][filename].append(cur_lineno)
+                    else:
+                        date_index[date][filename][1] = cur_lineno
+                    cur_lineno += 1
+            opener.export_index()
+
+        eol_mapper.mark_ok()
+        eol_mapper.close()
+
+        json.dump(date_index, open(date_index_path, "w"))
+
+    @staticmethod
+    def bufferizer(f, buf_size) -> Generator[Tuple[str, int], None, None]:
+        while True:
+            offset = f.tell()
+            buf = f.read(buf_size)
+            if not buf:
+                break
+
+            buf += f.readline()
+            yield buf, offset
 
 
 class IndexCollection(Dict[str, Index]):
@@ -228,53 +241,6 @@ class IndexCollection(Dict[str, Index]):
         return cls(indexes)
 
 
-def add_to_index(path, index_name, *, pool) -> None:
-    filename = os.path.basename(path)
-    eol_mapper = EOLMapper(path, index_name)
-    eol_mapper.open()
-
-    date_index_path = os.path.join(INDEX_DIR, index_name, DATE_INDEX_NAME)
-    date_index: dict = {}
-    try:
-        date_index = json.load(open(date_index_path, "r"))
-    except (FileNotFoundError, json.JSONDecodeError):
-        pass
-
-    date_index = defaultdict(dict, date_index)
-    cur_lineno = 0
-
-    _indexer = partial(indexer, index_name=index_name)
-
-    opener = fopen(path, index_name)
-    with opener as f:
-        for lines in pool.imap(_indexer, bufferizer(f, BUF_SIZE)):
-            for date, offset in lines:
-                eol_mapper.write(cur_lineno, offset)
-                date_index[date].setdefault(filename, [])
-                if len(date_index[date][filename]) < 2:
-                    date_index[date][filename].append(cur_lineno)
-                else:
-                    date_index[date][filename][1] = cur_lineno
-                cur_lineno += 1
-        opener.export_index()
-
-    eol_mapper.mark_ok()
-    eol_mapper.close()
-
-    json.dump(date_index, open(date_index_path, "w"))
-
-
-def bufferizer(f, buf_size) -> Generator[Tuple[str, int], None, None]:
-    while True:
-        offset = f.tell()
-        buf = f.read(buf_size)
-        if not buf:
-            break
-
-        buf += f.readline()
-        yield buf, offset
-
-
 def indexer(args, index_name) -> List[Tuple[str, int]]:
     indexes = get_indexes()
     index_conf = indexes[index_name]
@@ -293,14 +259,14 @@ def indexer(args, index_name) -> List[Tuple[str, int]]:
 
 
 class Opener(ContextManager):
-    file: Optional[Union[BinaryIO, igzip.IndexedGzipFile]]
+    file: Optional[Union[igzip.IndexedGzipFile, BinaryIO]]
 
     def __init__(self, name: str, index_name: str) -> None:
         self.name = name
         self.index_name = index_name
         self.file = None
 
-    def __enter__(self) -> BinaryIO:
+    def __enter__(self) -> Union[igzip.IndexedGzipFile, BinaryIO]:
         self.file = self.open()
         return self.file
 
@@ -315,7 +281,9 @@ class Opener(ContextManager):
 
         self.file.close()
 
-    def open(self) -> BinaryIO:  # pragma: no cover
+    def open(
+        self
+    ) -> Union[igzip.IndexedGzipFile, BinaryIO]:  # pragma: no cover
         raise NotImplementedError
 
     def export_index(self) -> None:
@@ -328,13 +296,11 @@ class TextFileOpener(Opener):
 
 
 class GzipFileOpener(Opener):
-    def open(self) -> BinaryIO:
+    def open(self) -> Union[igzip.IndexedGzipFile, igzip.IndexedGzipFile]:
         f = igzip.IndexedGzipFile(self.name)
         basename = os.path.basename(self.name)
-        gzindex_name = os.path.join(
-            INDEX_DIR, self.index_name, f"{basename}.gzindex"
-        )
-        if os.path.isfile(gzindex_name):
+        gzindex_name = INDEX_DIR / self.index_name / f"{basename}.gzindex"
+        if gzindex_name.is_file():
             f.import_index(gzindex_name)
 
         return f
@@ -344,10 +310,8 @@ class GzipFileOpener(Opener):
             raise IOError
 
         basename = os.path.basename(self.name)
-        gzindex_name = os.path.join(
-            INDEX_DIR, self.index_name, f"{basename}.gzindex"
-        )
         self.file.seek(self.file.tell() - 1)
+        gzindex_name = INDEX_DIR / self.index_name / f"{basename}.gzindex"
         self.file.export_index(gzindex_name)
 
 
@@ -372,7 +336,7 @@ def date_range(str_d1: str, str_d2: str) -> Generator[str, None, None]:
 
 def ensure_index_dir(index_dir: Path = INDEX_DIR) -> None:
     for index_name in get_indexes():
-        os.makedirs(os.path.join(index_dir, index_name), exist_ok=True)
+        (index_dir / index_name).mkdir(parents=True, exist_ok=True)
 
 
 def get_datetime(row: bytes, index_name: str) -> str:
@@ -494,3 +458,41 @@ def run_search(
     finally:
         pool.close()
         pool.join()
+
+
+def run():
+    main_parser = argparse.ArgumentParser(description="ToughSearch")
+
+    subparsers = main_parser.add_subparsers(dest="command")
+
+    index_parser = subparsers.add_parser(
+        "reindex", help="Reindex using conf.yaml"
+    )
+    index_parser.add_argument(
+        "index", help="Index name to reindex", default="", nargs="?"
+    )
+
+    search_parser = subparsers.add_parser("search", help="Searcher")
+    search_parser.add_argument(
+        "substring", help="Substring to search", default="", nargs="?"
+    )
+    search_parser.add_argument("index", help="Index to search")
+    search_parser.add_argument(
+        "-e",
+        "--regex",
+        help="Substring is a regex pattern",
+        action="store_true",
+    )
+    search_parser.add_argument("-df", "--date-from")
+    search_parser.add_argument("-dt", "--date-to")
+
+    args = main_parser.parse_args()
+    dict_args = args.__dict__
+
+    commands = {"search": run_search, "reindex": run_reindex}
+
+    commands[dict_args.pop("command")](**dict_args)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    run()
