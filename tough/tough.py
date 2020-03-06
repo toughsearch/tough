@@ -460,7 +460,7 @@ def run_search(
         pool.join()
 
 
-def run():
+def run() -> None:
     main_parser = argparse.ArgumentParser(description="ToughSearch")
 
     subparsers = main_parser.add_subparsers(dest="command")
@@ -489,7 +489,10 @@ def run():
     args = main_parser.parse_args()
     dict_args = args.__dict__
 
-    commands = {"search": run_search, "reindex": run_reindex}
+    commands: Dict[str, Callable] = {
+        "search": run_search,
+        "reindex": run_reindex,
+    }
 
     commands[dict_args.pop("command")](**dict_args)
 
