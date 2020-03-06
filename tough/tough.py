@@ -37,6 +37,7 @@ OK = b"OK"
 BUF_SIZE = 2 * 1024 * 1024
 BYTE_ORDER = "little"
 MapLine = namedtuple("MapLine", ["lineno", "offset", "length"])
+FileLike = Union[igzip.IndexedGzipFile, BinaryIO]
 
 
 class EOLMapper:
@@ -44,7 +45,7 @@ class EOLMapper:
     File EOL mapper.
     """
 
-    f: Optional[Union[BinaryIO, igzip.IndexedGzipFile]]
+    f: Optional[FileLike]
 
     def __init__(self, fname, index_name) -> None:
         basename = os.path.basename(fname)
@@ -124,14 +125,6 @@ def chunkify(
 
         for line_start in range(lines_from, lines_to, length):
             yield path, line_start, length, lines_to
-
-
-class Indexer:
-    def __init__(self):
-        ...
-
-    def add(self):
-        ...
 
 
 class Index:
@@ -259,14 +252,14 @@ def indexer(args, index_name) -> List[Tuple[str, int]]:
 
 
 class Opener(ContextManager):
-    file: Optional[Union[igzip.IndexedGzipFile, BinaryIO]]
+    file: Optional[FileLike]
 
     def __init__(self, name: str, index_name: str) -> None:
         self.name = name
         self.index_name = index_name
         self.file = None
 
-    def __enter__(self) -> Union[igzip.IndexedGzipFile, BinaryIO]:
+    def __enter__(self) -> FileLike:
         self.file = self.open()
         return self.file
 
@@ -281,9 +274,7 @@ class Opener(ContextManager):
 
         self.file.close()
 
-    def open(
-        self
-    ) -> Union[igzip.IndexedGzipFile, BinaryIO]:  # pragma: no cover
+    def open(self) -> FileLike:  # pragma: no cover
         raise NotImplementedError
 
     def export_index(self) -> None:
@@ -296,7 +287,7 @@ class TextFileOpener(Opener):
 
 
 class GzipFileOpener(Opener):
-    def open(self) -> Union[igzip.IndexedGzipFile, igzip.IndexedGzipFile]:
+    def open(self) -> FileLike:
         f = igzip.IndexedGzipFile(self.name)
         basename = os.path.basename(self.name)
         gzindex_name = INDEX_DIR / self.index_name / f"{basename}.gzindex"
