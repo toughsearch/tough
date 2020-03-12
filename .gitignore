@@ -1,6 +1,7 @@
 __pycache__
 .mypy_cache/
 .index/
+.python-version
 tough.build/
 tough.dist/
 build*/
