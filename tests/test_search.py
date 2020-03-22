@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 
-from tough.tough import Indexer, Searcher
+from tough.command import Indexer, Searcher
 
 
 @pytest.mark.parametrize(

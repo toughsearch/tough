@@ -1,6 +1,7 @@
 import pytest
 
-from tough.tough import date_range, get_datetime
+from tough.command import date_range
+from tough.index import get_datetime
 
 
 def test_date_range():
