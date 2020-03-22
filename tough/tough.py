@@ -40,6 +40,10 @@ MapLine = namedtuple("MapLine", ["lineno", "offset", "length"])
 FileLike = Union[igzip.IndexedGzipFile, BinaryIO]
 
 
+class UnknownCommandError(ValueError):
+    ...
+
+
 class EOLMapper:
     """
     File EOL mapper.
@@ -348,15 +352,6 @@ def get_datetime_ex(row: bytes, regex: str, fmt: str) -> str:
     return str(dt.astimezone(timezone.utc).date())
 
 
-def run_reindex(index_name: Optional[str] = None) -> None:
-    ensure_index_dir()
-    indexes = IndexCollection.from_yaml(CONF_NAME)
-    for index in indexes.values():
-        if index_name and index_name != index.name:
-            continue
-        index.reindex()
-
-
 def searcher(
     chunk: Tuple[str, int, int, int],
     regex: bool,
@@ -397,58 +392,93 @@ def searcher(
     return path, results
 
 
-def run_search(
-    substring: str,
-    regex: bool,
-    index: str,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-) -> None:
-    if not substring:
-        sys.stderr.write("Please provide substring\n")
-        return
+class Command:
+    def __init__(self, **params):
+        ...
 
-    indexes = get_indexes()
-    index_conf = indexes[index]
-    index_data = json.load(
-        open(os.path.join(INDEX_DIR, index, DATE_INDEX_NAME))
-    )
+    def run(self) -> None:
+        ...
 
-    to_search: List[Tuple[str, Optional[Tuple]]] = []
-    if not date_from or not date_to:
-        to_search = [
-            (x, None)
-            for x in glob.glob(
-                os.path.join(index_conf["base_dir"], index_conf["pattern"])
-            )
-        ]
 
-    else:
-        for d in date_range(date_from, date_to):
-            if d not in index_data:
+class Indexer(Command):
+    def __init__(self, index_name: Optional[str] = None) -> None:
+        self.index_name = index_name
+
+    def run(self) -> None:
+        ensure_index_dir()
+        indexes = IndexCollection.from_yaml(CONF_NAME)
+        for index in indexes.values():
+            if self.index_name and self.index_name != index.name:
                 continue
-            for filename, lines_range in index_data[d].items():
-                to_search.append(
-                    (
-                        os.path.join(
-                            index_conf["base_dir"], filename.strip("/")
-                        ),
-                        lines_range,
-                    )
+            index.reindex()
+
+
+class Searcher(Command):
+    def __init__(
+        self,
+        substring: str,
+        regex: bool,
+        index: str,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+    ) -> None:
+        self.substring = substring
+        self.regex = regex
+        self.index = index
+        self.date_from = date_from
+        self.date_to = date_to
+
+    def run(self) -> None:
+        if not self.substring:
+            sys.stderr.write("Please provide substring\n")
+            return
+
+        indexes = get_indexes()
+        index_conf = indexes[self.index]
+        index_data = json.load(
+            open(os.path.join(INDEX_DIR, self.index, DATE_INDEX_NAME))
+        )
+
+        to_search: List[Tuple[str, Optional[Tuple]]] = []
+        if not self.date_from or not self.date_to:
+            to_search = [
+                (x, None)
+                for x in glob.glob(
+                    os.path.join(index_conf["base_dir"], index_conf["pattern"])
                 )
+            ]
 
-    func = partial(
-        searcher, substring=substring.encode(), regex=regex, index_name=index
-    )
-    chunks = list(chunkify(to_search, index))
-    pool = mp.Pool(NUM_WORKERS)
+        else:
+            for d in date_range(self.date_from, self.date_to):
+                if d not in index_data:
+                    continue
+                for filename, lines_range in index_data[d].items():
+                    to_search.append(
+                        (
+                            os.path.join(
+                                index_conf["base_dir"], filename.strip("/")
+                            ),
+                            lines_range,
+                        )
+                    )
 
-    try:
-        for _, result in tqdm(pool.imap(func, chunks), total=len(chunks)):
-            sys.stdout.write("\n".join(x[1].decode() for x in result) + "\n")
-    finally:
-        pool.close()
-        pool.join()
+        func = partial(
+            searcher,
+            substring=self.substring.encode(),
+            regex=self.regex,
+            index_name=self.index,
+        )
+        chunks = list(chunkify(to_search, self.index))
+        pool = mp.Pool(NUM_WORKERS)
+
+        try:
+            for _, result in tqdm(pool.imap(func, chunks), total=len(chunks)):
+                sys.stdout.write(
+                    "\n".join(x[1].decode() for x in result) + "\n"
+                )
+        finally:
+            pool.close()
+            pool.join()
 
 
 def run() -> None:
@@ -480,12 +510,13 @@ def run() -> None:
     args = main_parser.parse_args()
     dict_args = args.__dict__
 
-    commands: Dict[str, Callable] = {
-        "search": run_search,
-        "reindex": run_reindex,
-    }
+    commands: Dict[str, Callable] = {"search": Searcher, "reindex": Indexer}
 
-    commands[dict_args.pop("command")](**dict_args)
+    cmd_class = commands.get(dict_args.pop("command"))
+    if not cmd_class:
+        raise UnknownCommandError
+    cmd = cmd_class(**dict_args)
+    cmd.run()
 
 
 if __name__ == "__main__":  # pragma: no cover

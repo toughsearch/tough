@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 
-from tough.tough import run_reindex, run_search
+from tough.tough import Indexer, Searcher
 
 
 @pytest.mark.parametrize(
@@ -22,22 +22,22 @@ from tough.tough import run_reindex, run_search
 def test_search_date_range(
     provide_data, capsys, substring, date_from, date_to, count, index_name
 ):
-    run_reindex(index_name)
-    run_search(substring, False, index_name, date_from, date_to)
+    Indexer(index_name).run()
+    Searcher(substring, False, index_name, date_from, date_to).run()
     captured = capsys.readouterr()
     assert len([*filter(None, captured.out.split("\n"))]) == count
 
 
 def test_search_all(provide_data, capsys, index_name):
-    run_reindex(index_name)
-    run_search("HTTP/1.1", False, index_name)
+    Indexer(index_name).run()
+    Searcher("HTTP/1.1", False, index_name).run()
     captured = capsys.readouterr()
     assert len([*filter(None, captured.out.split("\n"))]) == 330
 
 
 def test_search_regex(provide_data, capsys, index_name):
-    run_reindex(index_name)
-    run_search(r"HTTP.*", True, index_name, "2019-02-20", "2019-02-20")
+    Indexer(index_name).run()
+    Searcher(r"HTTP.*", True, index_name, "2019-02-20", "2019-02-20").run()
     captured = capsys.readouterr()
     assert len([*filter(None, captured.out.split("\n"))]) == 10
 
@@ -48,13 +48,13 @@ def test_search_wrong_index(create_data_file, capsys, index_name, search_date):
         index_name,
         ((datetime.date(2019, 2, 20), 1), (datetime.date(2019, 2, 21), 1)),
     )
-    run_reindex(index_name)
-    run_search(r"HTTP.*", True, index_name, search_date, search_date)
+    Indexer(index_name).run()
+    Searcher(r"HTTP.*", True, index_name, search_date, search_date).run()
     captured = capsys.readouterr()
     assert len([*filter(None, captured.out.split("\n"))]) == 1
 
 
 def test_search_fail(capsys):
-    run_search("", True, "")
+    Searcher("", True, "").run()
     captured = capsys.readouterr()
     assert "Please" in captured.err
